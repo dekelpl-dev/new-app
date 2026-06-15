@@ -227,9 +227,9 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 <div class="page" id="page-explain">
   <div class="content">
     <div class="section-title" style="text-align:right;margin-bottom:16px">📖 הסבר</div>
-    <div class="explain-card"><h3>🎯 ניקוד</h3><ul><li><strong>תוצאה מדויקת</strong> – 3 נקודות</li><li><strong>ניצחון/תיקו נכון</strong> – 1 נקודה</li><li><strong>פספוס</strong> – 0</li></ul></div>
+    <div class="explain-card"><h3>🎯 ניקוד משחקים</h3><ul><li><strong>תוצאה מדויקת</strong> – 3 נקודות</li><li><strong>ניצחון/תיקו נכון</strong> – 1 נקודה</li><li><strong>פספוס</strong> – 0</li></ul></div>
+    <div class="explain-card"><h3>🌟 ניקוד הימורים מיוחדים</h3><ul><li><strong>זוכה נכון</strong> – 10 נקודות</li><li><strong>סגנית נכונה</strong> – 10 נקודות</li><li><strong>מלך השערים נכון</strong> – 5 נקודות</li><li><strong>שלושתם יחד</strong> – בונוס! סה"כ <strong style="color:var(--gold)">35 נקודות</strong> (במקום 25)</li></ul></div>
     <div class="explain-card"><h3>🔒 נעילה</h3><p>כל הימור נועל בשריקת הפתיחה לפי שעון ישראל.</p></div>
-    <div class="explain-card"><h3>🌟 הימורים מיוחדים</h3><p>זוכה, סגנית ומלך השערים — כולם רואים את ההימורים של כולם בלשונית המיוחדים.</p></div>
     <div class="explain-card"><h3>📺 שידורים</h3><p>כל המשחקים בכאן 11 ובספורט 1 של צ'רלטון.</p></div>
   </div>
 </div>
@@ -244,6 +244,15 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
       <div id="user-management-list"></div>
       <button class="submit-btn" style="margin-top:12px" onclick="saveUsers()">💾 שמור שינויים</button>
       <div id="users-saved" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem">✅ נשמר!</div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
+      <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:6px">🌟 תוצאות הימורים מיוחדים</div>
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:12px">הכנס תוצאות סופיות לחישוב נקודות</div>
+      <div style="margin-bottom:9px"><label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">🏆 זוכה אמיתי</label><input id="real-winner" type="text" class="form-select" placeholder="שם הנבחרת הזוכה..." style="font-size:.9rem"></div>
+      <div style="margin-bottom:9px"><label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">🥈 סגנית אמיתית</label><input id="real-runnerup" type="text" class="form-select" placeholder="שם הנבחרת השנייה..." style="font-size:.9rem"></div>
+      <div style="margin-bottom:12px"><label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">👟 מלך שערים אמיתי</label><input id="real-topscorer" type="text" class="form-select" placeholder="שם השחקן..." style="font-size:.9rem"></div>
+      <button class="submit-btn" onclick="saveSpecialResults()">💾 שמור וחשב נקודות</button>
+      <div id="special-results-ok" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem"></div>
     </div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
       <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:12px">📝 הכנסת תוצאה</div>
@@ -292,7 +301,7 @@ const DEFAULT_USERS={
 let USERS={...DEFAULT_USERS}; // מיד זמין, יתעדכן מ-Firebase
 let usersLoaded=false;
 
-let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
+let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{},specialResults:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
 
 const FLAGS={'ברזיל':'🇧🇷','ארגנטינה':'🇦🇷','צרפת':'🇫🇷','גרמניה':'🇩🇪','ספרד':'🇪🇸','אנגליה':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','פורטוגל':'🇵🇹','הולנד':'🇳🇱','בלגיה':'🇧🇪','יפן':'🇯🇵','מרוקו':'🇲🇦','אורוגוואי':'🇺🇾','קרואטיה':'🇭🇷','מקסיקו':'🇲🇽','ארה"ב':'🇺🇸','קנדה':'🇨🇦','סנגל':'🇸🇳','דרום אפריקה':'🇿🇦','דרום קוריאה':'🇰🇷',"צ'כיה":'🇨🇿','בוסניה והרצגובינה':'🇧🇦','פראגוואי':'🇵🇾','האיטי':'🇭🇹','סקוטלנד':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','אוסטרליה':'🇦🇺','טורקיה':'🇹🇷','קטאר':'🇶🇦','שווייץ':'🇨🇭','חוף השנהב':'🇨🇮','אקוודור':'🇪🇨','קוראסאו':'🇨🇼','טוניסיה':'🇹🇳','שבדיה':'🇸🇪','ערב הסעודית':'🇸🇦','כף ורדה':'🇨🇻','איראן':'🇮🇷','ניו זילנד':'🇳🇿','מצרים':'🇪🇬','נורבגיה':'🇳🇴','עיראק':'🇮🇶',"אלג'יריה":'🇩🇿','אוסטריה':'🇦🇹','ירדן':'🇯🇴','גאנה':'🇬🇭','פנמה':'🇵🇦','קונגו הדמוקרטית':'🇨🇩','אוזבקיסטן':'🇺🇿','קולומביה':'🇨🇴','TBD':'❓'};
 const SL={group:'שלב הבתים',r32:'סיבוב 32',r16:'שמינית גמר',qf:'רבע גמר',sf:'חצי גמר',third:'מקום 3',final:'גמר 🏆'};
@@ -412,7 +421,7 @@ window.addEventListener('load',()=>{try{const s=sessionStorage.getItem('hk_user'
 
 function waitForFirebase(cb){if(window.firebaseReady)cb();else window.addEventListener('firebaseReady',cb,{once:true});}
 function loadScoresIntoM(){if(!appData.matchScores)return;M.forEach(m=>{m.score=appData.matchScores[m.id]||null;});}
-function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null,mu=appData.users?{...appData.users}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;if(mu)appData.users=mu;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};}}
+function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null,mu=appData.users?{...appData.users}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;if(mu)appData.users=mu;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};}}
 
   // טען משתמשים מ-Firebase
   if(appData.users&&Object.keys(appData.users).length>0){
@@ -446,7 +455,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -471,6 +480,34 @@ function submitBetModal(){if(!currentUser||!fbReady||!activeBetMatchId)return;co
 
 function renderSpecialBets(){if(!currentUser)return;const sb=(appData.specialBets&&appData.specialBets[currentUser.fbKey])||{};document.getElementById('bet-winner').value=sb.winner||'';document.getElementById('bet-runnerup').value=sb.runnerup||'';document.getElementById('bet-topscorer').value=sb.topscorer||'';['winner','runnerup','topscorer'].forEach(type=>{const c=document.getElementById('all-'+type+'-bets');if(!c)return;const rows=Object.entries(USERS).map(([k,u])=>{const v=(appData.specialBets&&appData.specialBets[u.fbKey]&&appData.specialBets[u.fbKey][type])||null;return v?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #333;font-size:.83rem"><span style="color:var(--muted)">${u.display}</span><strong>${v}</strong></div>`:'';}).filter(Boolean).join('');c.innerHTML=rows?`<div style="border:1px solid #333;border-radius:8px;padding:10px;margin-top:8px">${rows}</div>`:'';});}
 function saveSpecialBet(type){if(!currentUser||!fbReady)return;const val=document.getElementById('bet-'+type).value.trim();if(!val){showToast('הכנס ערך');return;}if(!appData.specialBets)appData.specialBets={};if(!appData.specialBets[currentUser.fbKey])appData.specialBets[currentUser.fbKey]={};appData.specialBets[currentUser.fbKey][type]=val;saveToFirebase();const ok=document.getElementById('saved-'+type);ok.style.display='block';setTimeout(()=>{ok.style.display='none';renderSpecialBets();},1500);}
+
+function loadSpecialResultsToAdmin(){
+  const sp=appData.specialResults||{};
+  const w=document.getElementById('real-winner');
+  const r=document.getElementById('real-runnerup');
+  const t=document.getElementById('real-topscorer');
+  if(w)w.value=sp.winner||'';
+  if(r)r.value=sp.runnerup||'';
+  if(t)t.value=sp.topscorer||'';
+}
+
+function saveSpecialResults(){
+  if(currentUser.username!=='dekel')return;
+  const w=document.getElementById('real-winner').value.trim();
+  const r=document.getElementById('real-runnerup').value.trim();
+  const t=document.getElementById('real-topscorer').value.trim();
+  if(!appData.specialResults)appData.specialResults={};
+  if(w)appData.specialResults.winner=w;
+  if(r)appData.specialResults.runnerup=r;
+  if(t)appData.specialResults.topscorer=t;
+  recalcAllScores();
+  saveToFirebase();
+  renderLeaderboard();
+  const ok=document.getElementById('special-results-ok');
+  ok.innerHTML='✅ נשמר! | '+Object.entries(USERS).map(([k,u])=>`${u.display}:${appData.scores[u.fbKey]||0}נק'`).join(' | ');
+  ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',6000);
+}
 
 function renderUserManagement(){
   const c=document.getElementById('user-management-list');
@@ -498,7 +535,29 @@ function saveUsers(){
 
 function populateAdminSelect(){const sel=document.getElementById('admin-match');if(!sel)return;sel.innerHTML='<option value="">— בחר —</option>';M.forEach(m=>{const opt=document.createElement('option');opt.value=m.id;opt.textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''} | ${fmtShort(m.kick)}${m.score?' ✅':''}`;sel.appendChild(opt);});}
 function onAdminMatchSelect(){const matchId=document.getElementById('admin-match').value,row=document.getElementById('admin-score-row');if(!matchId){row.style.display='none';return;}const m=M.find(x=>x.id===matchId);if(!m)return;row.style.display='block';document.getElementById('admin-match-label').textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''}`;document.getElementById('admin-home-label').textContent=m.home;document.getElementById('admin-away-label').textContent=m.away;document.getElementById('admin-home').value=m.score?m.score[0]:'';document.getElementById('admin-away').value=m.score?m.score[1]:'';}
-function recalcAllScores(){if(!appData.bets)appData.bets={};appData.scores={};M.forEach(m=>{if(!m.score)return;Object.entries(USERS).forEach(([un,ud])=>{const bet=(appData.bets[ud.fbKey]||{})[m.id];if(!bet)return;const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D',ex=bet.home===m.score[0]&&bet.away===m.score[1],pts=ex?3:(bw===rw?1:0);if(!appData.scores[ud.fbKey])appData.scores[ud.fbKey]=0;appData.scores[ud.fbKey]+=pts;});});}
+function recalcAllScores(){
+  if(!appData.bets)appData.bets={};
+  appData.scores={};
+  // נקודות משחקים
+  M.forEach(m=>{if(!m.score)return;Object.entries(USERS).forEach(([un,ud])=>{const bet=(appData.bets[ud.fbKey]||{})[m.id];if(!bet)return;const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D',ex=bet.home===m.score[0]&&bet.away===m.score[1],pts=ex?3:(bw===rw?1:0);if(!appData.scores[ud.fbKey])appData.scores[ud.fbKey]=0;appData.scores[ud.fbKey]+=pts;});});
+  // נקודות הימורים מיוחדים
+  const sp=appData.specialResults||{};
+  if(sp.winner||sp.runnerup||sp.topscorer){
+    Object.entries(USERS).forEach(([un,ud])=>{
+      const sb=(appData.specialBets&&appData.specialBets[ud.fbKey])||{};
+      if(!appData.scores[ud.fbKey])appData.scores[ud.fbKey]=0;
+      const gotWinner=sp.winner&&sb.winner&&sb.winner.trim().toLowerCase()===sp.winner.trim().toLowerCase();
+      const gotRunnerup=sp.runnerup&&sb.runnerup&&sb.runnerup.trim().toLowerCase()===sp.runnerup.trim().toLowerCase();
+      const gotTopscorer=sp.topscorer&&sb.topscorer&&sb.topscorer.trim().toLowerCase()===sp.topscorer.trim().toLowerCase();
+      let pts=0;
+      if(gotWinner)pts+=10;
+      if(gotRunnerup)pts+=10;
+      if(gotTopscorer)pts+=5;
+      if(gotWinner&&gotRunnerup&&gotTopscorer)pts+=10; // בונוס שלושתם
+      appData.scores[ud.fbKey]+=pts;
+    });
+  }
+}
 function adminSetScore(){if(currentUser.username!=='dekel')return;const matchId=document.getElementById('admin-match').value,h=parseInt(document.getElementById('admin-home').value),a=parseInt(document.getElementById('admin-away').value);if(!matchId){showToast('בחר משחק');return;}if(isNaN(h)||isNaN(a)){showToast('הכנס תוצאה');return;}const m=M.find(x=>x.id===matchId);if(!m)return;m.score=[h,a];if(!appData.matchScores)appData.matchScores={};appData.matchScores[matchId]=[h,a];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderBetsList();renderAdminResults();populateAdminSelect();const ok=document.getElementById('admin-ok');ok.innerHTML='✅ נשמר! | '+Object.entries(USERS).map(([k,u])=>`${u.display}:${appData.scores[u.fbKey]||0}נק'`).join(' | ');ok.style.display='block';setTimeout(()=>ok.style.display='none',5000);}
 function renderAdminResults(){const list=document.getElementById('admin-results-list');if(!list)return;const ws=M.filter(m=>m.score);if(ws.length===0){list.innerHTML='<div style="color:var(--muted);text-align:center;padding:14px">עוד לא הוכנסו תוצאות</div>';return;}list.innerHTML=ws.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #333;gap:8px"><div style="font-size:.83rem">${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''}</div><div style="display:flex;align-items:center;gap:8px"><div style="background:#111;border-radius:6px;padding:3px 11px;font-weight:900;color:var(--gold)">${m.score[0]}–${m.score[1]}</div><button onclick="adminDeleteScore('${m.id}')" style="background:rgba(192,0,10,.2);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.76rem;font-family:inherit">מחק</button></div></div>`).join('');}
 function adminDeleteScore(matchId){if(currentUser.username!=='dekel')return;const m=M.find(x=>x.id===matchId);if(!m)return;m.score=null;if(appData.matchScores)delete appData.matchScores[matchId];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderAdminResults();populateAdminSelect();showToast('✅ נמחק');}

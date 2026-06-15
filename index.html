@@ -282,10 +282,15 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 </div>
 
 <script>
-// USERS נטען מ-Firebase — ניתן לשינוי ישירות מה-Console
-// מבנה ב-Firebase: haksishim/users/dekel: {pass, display, fbKey}
-let USERS = {}; // יתמלא מ-Firebase
-let usersLoaded = false;
+// USERS — ברירת מחדל אם Firebase לא טען עדיין
+const DEFAULT_USERS={
+  'dekel':{pass:'dekel2026',display:'דקל',fbKey:'dekel'},
+  'mendi':{pass:'mendi2026',display:'מנדי',fbKey:'mendi'},
+  'yoni':{pass:'Yn@7!kX2',display:'יוני',fbKey:'yoni'},
+  'tsiko':{pass:'tsiko2026',display:"צ'יקו",fbKey:'tsiko'},
+};
+let USERS={...DEFAULT_USERS}; // מיד זמין, יתעדכן מ-Firebase
+let usersLoaded=false;
 
 let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
 
@@ -399,7 +404,7 @@ const M=[
 {id:'fin',stage:'final',home:'TBD',away:'TBD',kick:'2026-07-19T22:00:00',venue:"ניו יורק (MetLife)",score:null},
 ];
 
-function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!usersLoaded){e.textContent='⏳ טוען נתונים... נסה שוב';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);localStorage.setItem('hk_saved_pass',p);}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
+function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);localStorage.setItem('hk_saved_pass',p);}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display==='flex')doLogin();});
 function doLogout(){try{sessionStorage.removeItem('hk_user');}catch(e){}try{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}catch(e){}currentUser=null;document.getElementById('login-screen').style.display='flex';document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('remember-me').checked=false;document.getElementById('login-error').textContent='';document.getElementById('userBadge').style.display='none';document.getElementById('admin-btn').style.display='none';}
 function afterLogin(){document.getElementById('userBadge').style.display='flex';document.getElementById('headerName').textContent=currentUser.display;document.getElementById('headerAvatar').textContent=currentUser.display[0];document.getElementById('betsAvatar').textContent=currentUser.display[0];document.getElementById('betsUsername').textContent=currentUser.display;if(currentUser.username==='dekel')document.getElementById('admin-btn').style.display='inline-block';waitForFirebase(loadFromFirebase);}

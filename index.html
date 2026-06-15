@@ -413,11 +413,39 @@ const M=[
 {id:'fin',stage:'final',home:'TBD',away:'TBD',kick:'2026-07-19T22:00:00',venue:"ניו יורק (MetLife)",score:null},
 ];
 
-function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);localStorage.setItem('hk_saved_pass',p);}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
+function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);// לא שומרים סיסמה — מאמתים תמיד מול Firebase
+localStorage.removeItem('hk_saved_pass');}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display==='flex')doLogin();});
 function doLogout(){try{sessionStorage.removeItem('hk_user');}catch(e){}try{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}catch(e){}currentUser=null;document.getElementById('login-screen').style.display='flex';document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('remember-me').checked=false;document.getElementById('login-error').textContent='';document.getElementById('userBadge').style.display='none';document.getElementById('admin-btn').style.display='none';}
 function afterLogin(){document.getElementById('userBadge').style.display='flex';document.getElementById('headerName').textContent=currentUser.display;document.getElementById('headerAvatar').textContent=currentUser.display[0];document.getElementById('betsAvatar').textContent=currentUser.display[0];document.getElementById('betsUsername').textContent=currentUser.display;if(currentUser.username==='dekel')document.getElementById('admin-btn').style.display='inline-block';waitForFirebase(loadFromFirebase);}
-window.addEventListener('load',()=>{try{const s=sessionStorage.getItem('hk_user');if(s&&USERS[s]){currentUser={username:s,...USERS[s]};document.getElementById('login-screen').style.display='none';afterLogin();return;}}catch(e){}try{const su=localStorage.getItem('hk_saved_user'),sp=localStorage.getItem('hk_saved_pass');if(su&&sp&&USERS[su]&&USERS[su].pass===sp){currentUser={username:su,...USERS[su]};document.getElementById('login-screen').style.display='none';afterLogin();return;}else if(su){document.getElementById('login-user').value=su;if(sp)document.getElementById('login-pass').value=sp;document.getElementById('remember-me').checked=true;}}catch(e){}document.getElementById('login-screen').style.display='flex';});
+window.addEventListener('load',()=>{
+  // session קצר (טאב פתוח) — כניסה מיידית
+  try{const s=sessionStorage.getItem('hk_user');if(s){// נחכה ל-Firebase ואז נאמת
+    document.getElementById('login-screen').style.display='none'; // הסתר בינתיים
+    waitForFirebase(()=>{
+      if(USERS[s]){currentUser={username:s,...USERS[s]};afterLogin();}
+      else{document.getElementById('login-screen').style.display='flex';}
+    });return;}}catch(e){}
+  // "זכור אותי" — נחכה ל-Firebase ואז ניכנס אוטומטית
+  try{
+    const su=localStorage.getItem('hk_saved_user');
+    if(su){
+      document.getElementById('login-screen').style.display='none'; // הסתר בזמן טעינה
+      waitForFirebase(()=>{
+        if(USERS[su]){
+          // כניסה אוטומטית — הסיסמה מ-Firebase, לא מהזיכרון
+          currentUser={username:su,...USERS[su]};
+          afterLogin();
+        } else {
+          document.getElementById('login-user').value=su;
+          document.getElementById('remember-me').checked=true;
+          document.getElementById('login-screen').style.display='flex';
+        }
+      });return;
+    }
+  }catch(e){}
+  document.getElementById('login-screen').style.display='flex';
+});
 
 function waitForFirebase(cb){if(window.firebaseReady)cb();else window.addEventListener('firebaseReady',cb,{once:true});}
 function loadScoresIntoM(){if(!appData.matchScores)return;M.forEach(m=>{m.score=appData.matchScores[m.id]||null;});}

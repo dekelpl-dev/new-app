@@ -239,6 +239,13 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   <div class="content">
     <div style="font-size:1.3rem;font-weight:900;color:var(--gold);margin-bottom:18px">⚙️ פאנל אדמין</div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
+      <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:12px">👤 ניהול משתמשים</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">לשינוי סיסמה — ערוך כאן ולחץ שמור. אפשר גם ישירות ב-Firebase Console תחת <code style="background:#111;padding:2px 6px;border-radius:4px">haksishim/users</code></div>
+      <div id="user-management-list"></div>
+      <button class="submit-btn" style="margin-top:12px" onclick="saveUsers()">💾 שמור שינויים</button>
+      <div id="users-saved" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem">✅ נשמר!</div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
       <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:12px">📝 הכנסת תוצאה</div>
       <div style="margin-bottom:11px"><label style="font-size:.78rem;color:var(--muted);font-weight:700;display:block;margin-bottom:5px">בחר משחק</label>
       <select id="admin-match" class="form-select" onchange="onAdminMatchSelect()"><option value="">— בחר —</option></select></div>
@@ -275,13 +282,12 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 </div>
 
 <script>
-const USERS={
-  'dekel':{pass:'dekel2026',display:'דקל',fbKey:'dekel'},
-  'mendi':{pass:'mendi2026',display:'מנדי',fbKey:'mendi'},
-  'yoni':{pass:'yoni2026',display:'יוני',fbKey:'yoni'},
-  'tsiko':{pass:'tsiko2026',display:"צ'יקו",fbKey:'tsiko'},
-};
-let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
+// USERS נטען מ-Firebase — ניתן לשינוי ישירות מה-Console
+// מבנה ב-Firebase: haksishim/users/dekel: {pass, display, fbKey}
+let USERS = {}; // יתמלא מ-Firebase
+let usersLoaded = false;
+
+let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
 
 const FLAGS={'ברזיל':'🇧🇷','ארגנטינה':'🇦🇷','צרפת':'🇫🇷','גרמניה':'🇩🇪','ספרד':'🇪🇸','אנגליה':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','פורטוגל':'🇵🇹','הולנד':'🇳🇱','בלגיה':'🇧🇪','יפן':'🇯🇵','מרוקו':'🇲🇦','אורוגוואי':'🇺🇾','קרואטיה':'🇭🇷','מקסיקו':'🇲🇽','ארה"ב':'🇺🇸','קנדה':'🇨🇦','סנגל':'🇸🇳','דרום אפריקה':'🇿🇦','דרום קוריאה':'🇰🇷',"צ'כיה":'🇨🇿','בוסניה והרצגובינה':'🇧🇦','פראגוואי':'🇵🇾','האיטי':'🇭🇹','סקוטלנד':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','אוסטרליה':'🇦🇺','טורקיה':'🇹🇷','קטאר':'🇶🇦','שווייץ':'🇨🇭','חוף השנהב':'🇨🇮','אקוודור':'🇪🇨','קוראסאו':'🇨🇼','טוניסיה':'🇹🇳','שבדיה':'🇸🇪','ערב הסעודית':'🇸🇦','כף ורדה':'🇨🇻','איראן':'🇮🇷','ניו זילנד':'🇳🇿','מצרים':'🇪🇬','נורבגיה':'🇳🇴','עיראק':'🇮🇶',"אלג'יריה":'🇩🇿','אוסטריה':'🇦🇹','ירדן':'🇯🇴','גאנה':'🇬🇭','פנמה':'🇵🇦','קונגו הדמוקרטית':'🇨🇩','אוזבקיסטן':'🇺🇿','קולומביה':'🇨🇴','TBD':'❓'};
 const SL={group:'שלב הבתים',r32:'סיבוב 32',r16:'שמינית גמר',qf:'רבע גמר',sf:'חצי גמר',third:'מקום 3',final:'גמר 🏆'};
@@ -393,7 +399,7 @@ const M=[
 {id:'fin',stage:'final',home:'TBD',away:'TBD',kick:'2026-07-19T22:00:00',venue:"ניו יורק (MetLife)",score:null},
 ];
 
-function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);localStorage.setItem('hk_saved_pass',p);}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
+function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!usersLoaded){e.textContent='⏳ טוען נתונים... נסה שוב';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);localStorage.setItem('hk_saved_pass',p);}else{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}}catch(x){}document.getElementById('login-screen').style.display='none';afterLogin();}catch(err){document.getElementById('login-error').textContent='❌ '+err.message;}}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display==='flex')doLogin();});
 function doLogout(){try{sessionStorage.removeItem('hk_user');}catch(e){}try{localStorage.removeItem('hk_saved_user');localStorage.removeItem('hk_saved_pass');}catch(e){}currentUser=null;document.getElementById('login-screen').style.display='flex';document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('remember-me').checked=false;document.getElementById('login-error').textContent='';document.getElementById('userBadge').style.display='none';document.getElementById('admin-btn').style.display='none';}
 function afterLogin(){document.getElementById('userBadge').style.display='flex';document.getElementById('headerName').textContent=currentUser.display;document.getElementById('headerAvatar').textContent=currentUser.display[0];document.getElementById('betsAvatar').textContent=currentUser.display[0];document.getElementById('betsUsername').textContent=currentUser.display;if(currentUser.username==='dekel')document.getElementById('admin-btn').style.display='inline-block';waitForFirebase(loadFromFirebase);}
@@ -401,12 +407,41 @@ window.addEventListener('load',()=>{try{const s=sessionStorage.getItem('hk_user'
 
 function waitForFirebase(cb){if(window.firebaseReady)cb();else window.addEventListener('firebaseReady',cb,{once:true});}
 function loadScoresIntoM(){if(!appData.matchScores)return;M.forEach(m=>{m.score=appData.matchScores[m.id]||null;});}
-function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};}}loadScoresIntoM();document.getElementById('loadingOverlay').classList.add('hidden');fbReady=true;renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();if(document.getElementById('page-admin').classList.contains('active')){populateAdminSelect();renderAdminResults();}});}
+function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null,mu=appData.users?{...appData.users}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;if(mu)appData.users=mu;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};}}
+
+  // טען משתמשים מ-Firebase
+  if(appData.users&&Object.keys(appData.users).length>0){
+    USERS=appData.users;
+    usersLoaded=true;
+  } else {
+    // אתחול ראשוני — כתוב משתמשים ל-Firebase
+    const defaultUsers={
+      'dekel':{pass:'dekel2026',display:'דקל',fbKey:'dekel'},
+      'mendi':{pass:'mendi2026',display:'מנדי',fbKey:'mendi'},
+      'yoni':{pass:'Yn@7!kX2',display:'יוני',fbKey:'yoni'},
+      'tsiko':{pass:'tsiko2026',display:"צ'יקו",fbKey:'tsiko'},
+    };
+    USERS=defaultUsers;
+    appData.users=defaultUsers;
+    usersLoaded=true;
+    window.fbSet(window.fbRef(window.fbDb,'haksishim'),appData);
+  }
+
+  loadScoresIntoM();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  fbReady=true;
+  renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();
+  if(document.getElementById('page-admin').classList.contains('active')){populateAdminSelect();renderAdminResults();}
+  // אם מסך כניסה פתוח וטעינה הסתיימה — אפשר להתחבר
+  if(document.getElementById('login-screen').style.display==='flex'){
+    document.getElementById('login-error').textContent='';
+  }
+});}
 async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRef(window.fbDb,'haksishim'),appData);showSync();}catch(e){showToast('❌ שגיאה');}finally{setTimeout(()=>{isSaving=false;},3000);}}
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -431,6 +466,30 @@ function submitBetModal(){if(!currentUser||!fbReady||!activeBetMatchId)return;co
 
 function renderSpecialBets(){if(!currentUser)return;const sb=(appData.specialBets&&appData.specialBets[currentUser.fbKey])||{};document.getElementById('bet-winner').value=sb.winner||'';document.getElementById('bet-runnerup').value=sb.runnerup||'';document.getElementById('bet-topscorer').value=sb.topscorer||'';['winner','runnerup','topscorer'].forEach(type=>{const c=document.getElementById('all-'+type+'-bets');if(!c)return;const rows=Object.entries(USERS).map(([k,u])=>{const v=(appData.specialBets&&appData.specialBets[u.fbKey]&&appData.specialBets[u.fbKey][type])||null;return v?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #333;font-size:.83rem"><span style="color:var(--muted)">${u.display}</span><strong>${v}</strong></div>`:'';}).filter(Boolean).join('');c.innerHTML=rows?`<div style="border:1px solid #333;border-radius:8px;padding:10px;margin-top:8px">${rows}</div>`:'';});}
 function saveSpecialBet(type){if(!currentUser||!fbReady)return;const val=document.getElementById('bet-'+type).value.trim();if(!val){showToast('הכנס ערך');return;}if(!appData.specialBets)appData.specialBets={};if(!appData.specialBets[currentUser.fbKey])appData.specialBets[currentUser.fbKey]={};appData.specialBets[currentUser.fbKey][type]=val;saveToFirebase();const ok=document.getElementById('saved-'+type);ok.style.display='block';setTimeout(()=>{ok.style.display='none';renderSpecialBets();},1500);}
+
+function renderUserManagement(){
+  const c=document.getElementById('user-management-list');
+  if(!c||!usersLoaded)return;
+  c.innerHTML=Object.entries(USERS).map(([k,u])=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="min-width:60px;font-weight:700;font-size:.9rem">${u.display}</div>
+      <div style="font-size:.75rem;color:var(--muted);min-width:55px">${k}</div>
+      <input id="pass-${k}" type="text" value="${u.pass}" style="flex:1;min-width:140px;background:#111;border:1.5px solid #444;color:var(--text);font-family:monospace;font-size:.88rem;padding:7px 10px;border-radius:8px;direction:ltr;text-align:left" placeholder="סיסמה חדשה">
+    </div>`).join('');
+}
+
+function saveUsers(){
+  if(!currentUser||currentUser.username!=='dekel')return;
+  Object.keys(USERS).forEach(k=>{
+    const inp=document.getElementById('pass-'+k);
+    if(inp&&inp.value.trim()) USERS[k].pass=inp.value.trim();
+  });
+  appData.users=USERS;
+  saveToFirebase();
+  const ok=document.getElementById('users-saved');
+  ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',2000);
+}
 
 function populateAdminSelect(){const sel=document.getElementById('admin-match');if(!sel)return;sel.innerHTML='<option value="">— בחר —</option>';M.forEach(m=>{const opt=document.createElement('option');opt.value=m.id;opt.textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''} | ${fmtShort(m.kick)}${m.score?' ✅':''}`;sel.appendChild(opt);});}
 function onAdminMatchSelect(){const matchId=document.getElementById('admin-match').value,row=document.getElementById('admin-score-row');if(!matchId){row.style.display='none';return;}const m=M.find(x=>x.id===matchId);if(!m)return;row.style.display='block';document.getElementById('admin-match-label').textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''}`;document.getElementById('admin-home-label').textContent=m.home;document.getElementById('admin-away-label').textContent=m.away;document.getElementById('admin-home').value=m.score?m.score[0]:'';document.getElementById('admin-away').value=m.score?m.score[1]:'';}

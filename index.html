@@ -190,6 +190,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 <div class="page" id="page-special">
   <div class="content">
     <div class="section-title">🌟 הימורים מיוחדים</div>
+    <div id="special-lock-note" style="display:none;background:rgba(192,0,10,0.12);border:1px solid rgba(192,0,10,0.3);border-radius:10px;padding:11px 16px;margin-bottom:18px;font-size:.85rem;color:#ff8080;font-weight:700;text-align:center">🔒 ההימורים המיוחדים נעולים — לא ניתן לשנות</div>
     <div style="font-size:.8rem;color:var(--muted);text-align:center;margin-bottom:18px">כל החברים רואים את ההימורים של כולם כאן</div>
     <div class="special-bet-card">
       <div class="special-bet-title">🏆 מי יהיה אלוף העולם?</div>
@@ -506,7 +507,42 @@ function closeBetModal(){document.getElementById('bet-modal').style.display='non
 document.getElementById('bet-modal').addEventListener('click',e=>{if(e.target===document.getElementById('bet-modal'))closeBetModal();});
 function submitBetModal(){if(!currentUser||!fbReady||!activeBetMatchId)return;const h=document.getElementById('modal-home').value,a=document.getElementById('modal-away').value;if(h===''||a===''){showToast('הכנס תוצאה');return;}const m=M.find(x=>x.id===activeBetMatchId);if(!m||isLocked(m.kick)){showToast('🔒 נעול');return;}if(!appData.bets)appData.bets={};if(!appData.bets[currentUser.fbKey])appData.bets[currentUser.fbKey]={};appData.bets[currentUser.fbKey][activeBetMatchId]={home:parseInt(h),away:parseInt(a)};saveToFirebase();renderBetsList();document.getElementById('modal-ok').style.display='block';setTimeout(()=>closeBetModal(),1000);}
 
-function renderSpecialBets(){if(!currentUser)return;const sb=(appData.specialBets&&appData.specialBets[currentUser.fbKey])||{};document.getElementById('bet-winner').value=sb.winner||'';document.getElementById('bet-runnerup').value=sb.runnerup||'';document.getElementById('bet-topscorer').value=sb.topscorer||'';['winner','runnerup','topscorer'].forEach(type=>{const c=document.getElementById('all-'+type+'-bets');if(!c)return;const rows=Object.entries(USERS).map(([k,u])=>{const v=(appData.specialBets&&appData.specialBets[u.fbKey]&&appData.specialBets[u.fbKey][type])||null;return v?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #333;font-size:.83rem"><span style="color:var(--muted)">${u.display}</span><strong>${v}</strong></div>`:'';}).filter(Boolean).join('');c.innerHTML=rows?`<div style="border:1px solid #333;border-radius:8px;padding:10px;margin-top:8px">${rows}</div>`:'';});}
+function renderSpecialBets(){
+  if(!currentUser)return;
+  const sb=(appData.specialBets&&appData.specialBets[currentUser.fbKey])||{};
+  const LOCKED=true; // שנה ל-false כדי לפתוח שוב
+
+  ['winner','runnerup','topscorer'].forEach(type=>{
+    const inp=document.getElementById('bet-'+type);
+    const btn=inp&&inp.nextElementSibling;
+    if(inp){
+      inp.value=sb[type]||'';
+      inp.disabled=LOCKED;
+      inp.style.opacity=LOCKED?'0.5':'1';
+      inp.style.cursor=LOCKED?'not-allowed':'text';
+    }
+    if(btn&&btn.tagName==='BUTTON'){
+      btn.disabled=LOCKED;
+      btn.style.opacity=LOCKED?'0.4':'1';
+      btn.style.cursor=LOCKED?'not-allowed':'pointer';
+    }
+  });
+
+  // הצג הודעת נעילה
+  const lockNote=document.getElementById('special-lock-note');
+  if(lockNote)lockNote.style.display=LOCKED?'block':'none';
+
+  // הצג הימורים של כולם
+  ['winner','runnerup','topscorer'].forEach(type=>{
+    const c=document.getElementById('all-'+type+'-bets');
+    if(!c)return;
+    const rows=Object.entries(USERS).map(([k,u])=>{
+      const v=(appData.specialBets&&appData.specialBets[u.fbKey]&&appData.specialBets[u.fbKey][type])||null;
+      return v?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #333;font-size:.83rem"><span style="color:var(--muted)">${u.display}</span><strong>${v}</strong></div>`:'';
+    }).filter(Boolean).join('');
+    c.innerHTML=rows?`<div style="border:1px solid #333;border-radius:8px;padding:10px;margin-top:8px">${rows}</div>`:'';
+  });
+}
 function saveSpecialBet(type){if(!currentUser||!fbReady)return;const val=document.getElementById('bet-'+type).value.trim();if(!val){showToast('הכנס ערך');return;}if(!appData.specialBets)appData.specialBets={};if(!appData.specialBets[currentUser.fbKey])appData.specialBets[currentUser.fbKey]={};appData.specialBets[currentUser.fbKey][type]=val;saveToFirebase();const ok=document.getElementById('saved-'+type);ok.style.display='block';setTimeout(()=>{ok.style.display='none';renderSpecialBets();},1500);}
 
 function loadSpecialResultsToAdmin(){

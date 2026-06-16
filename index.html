@@ -45,7 +45,43 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 .content{max-width:1200px;margin:0 auto;padding:24px 16px;}
 .section-title{text-align:center;font-size:1.4rem;font-weight:900;color:var(--gold);margin-bottom:18px;}
 .leaderboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:24px;}
-.leader-card{background:var(--card);border-radius:14px;padding:20px;text-align:center;border:2px solid transparent;cursor:pointer;transition:transform .2s;}
+/* CELEBRATION BUBBLE */
+.celebration-bubble {
+  position:absolute;
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%) translateY(-100%);
+  background:linear-gradient(135deg,#f5c800,#ff9500);
+  color:#000;
+  font-size:.82rem;
+  font-weight:900;
+  padding:8px 14px;
+  border-radius:20px;
+  white-space:nowrap;
+  box-shadow:0 4px 20px rgba(245,200,0,0.5);
+  animation:bubblePop 4s ease forwards;
+  pointer-events:none;
+  z-index:10;
+}
+.celebration-bubble::after {
+  content:'';
+  position:absolute;
+  bottom:-7px;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;height:0;
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-top:8px solid #ff9500;
+}
+@keyframes bubblePop {
+  0%   {opacity:0;transform:translateX(-50%) translateY(-110%) scale(0.6);}
+  15%  {opacity:1;transform:translateX(-50%) translateY(-100%) scale(1.1);}
+  25%  {transform:translateX(-50%) translateY(-100%) scale(1);}
+  70%  {opacity:1;transform:translateX(-50%) translateY(-100%) scale(1);}
+  100% {opacity:0;transform:translateX(-50%) translateY(-120%) scale(0.9);}
+}
+.leader-card{position:relative;}
 .leader-card:hover{transform:translateY(-3px);}
 .leader-card.rank-1{border-color:var(--gold);}.leader-card.rank-2{border-color:#bbb;}.leader-card.rank-3{border-color:#cd7f32;}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
@@ -240,6 +276,22 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   <div class="content">
     <div style="font-size:1.3rem;font-weight:900;color:var(--gold);margin-bottom:18px">⚙️ פאנל אדמין</div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
+      <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:6px">🎉 עריכת בועת ניצחון</div>
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">הבועה מופיעה מעל שם השחקן בטבלה כשהוא פוגע בתוצאה מדויקת</div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">טקסט הבועה</label>
+        <input id="bubble-text" type="text" class="form-select" placeholder="לדוגמה: 🎯 מדויק! הוא רואה הכל 👁️" style="font-size:.9rem" oninput="previewBubble()">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">תצוגה מקדימה</label>
+        <div style="background:#111;border-radius:10px;padding:16px;text-align:center;min-height:60px;display:flex;align-items:center;justify-content:center">
+          <div id="bubble-preview" style="background:linear-gradient(135deg,#f5c800,#ff9500);color:#000;font-size:.82rem;font-weight:900;padding:8px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 20px rgba(245,200,0,0.5)">🎯 מדויק! הוא רואה הכל 👁️</div>
+        </div>
+      </div>
+      <button class="submit-btn" onclick="saveBubbleText()">💾 שמור</button>
+      <div id="bubble-saved" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem">✅ נשמר!</div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
       <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:12px">👤 ניהול משתמשים</div>
       <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">לשינוי סיסמה — ערוך כאן ולחץ שמור. אפשר גם ישירות ב-Firebase Console תחת <code style="background:#111;padding:2px 6px;border-radius:4px">haksishim/users</code></div>
       <div id="user-management-list"></div>
@@ -302,7 +354,7 @@ const DEFAULT_USERS={
 let USERS={...DEFAULT_USERS}; // מיד זמין, יתעדכן מ-Firebase
 let usersLoaded=false;
 
-let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{},specialResults:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
+let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},users:{},specialResults:{},settings:{}},matchFilter='all',fbReady=false,isSaving=false,activeBetMatchId=null;
 
 const FLAGS={'ברזיל':'🇧🇷','ארגנטינה':'🇦🇷','צרפת':'🇫🇷','גרמניה':'🇩🇪','ספרד':'🇪🇸','אנגליה':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','פורטוגל':'🇵🇹','הולנד':'🇳🇱','בלגיה':'🇧🇪','יפן':'🇯🇵','מרוקו':'🇲🇦','אורוגוואי':'🇺🇾','קרואטיה':'🇭🇷','מקסיקו':'🇲🇽','ארה"ב':'🇺🇸','קנדה':'🇨🇦','סנגל':'🇸🇳','דרום אפריקה':'🇿🇦','דרום קוריאה':'🇰🇷',"צ'כיה":'🇨🇿','בוסניה והרצגובינה':'🇧🇦','פראגוואי':'🇵🇾','האיטי':'🇭🇹','סקוטלנד':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','אוסטרליה':'🇦🇺','טורקיה':'🇹🇷','קטאר':'🇶🇦','שווייץ':'🇨🇭','חוף השנהב':'🇨🇮','אקוודור':'🇪🇨','קוראסאו':'🇨🇼','טוניסיה':'🇹🇳','שבדיה':'🇸🇪','ערב הסעודית':'🇸🇦','כף ורדה':'🇨🇻','איראן':'🇮🇷','ניו זילנד':'🇳🇿','מצרים':'🇪🇬','נורבגיה':'🇳🇴','עיראק':'🇮🇶',"אלג'יריה":'🇩🇿','אוסטריה':'🇦🇹','ירדן':'🇯🇴','גאנה':'🇬🇭','פנמה':'🇵🇦','קונגו הדמוקרטית':'🇨🇩','אוזבקיסטן':'🇺🇿','קולומביה':'🇨🇴','TBD':'❓'};
 const SL={group:'שלב הבתים',r32:'סיבוב 32',r16:'שמינית גמר',qf:'רבע גמר',sf:'חצי גמר',third:'מקום 3',final:'גמר 🏆'};
@@ -450,7 +502,7 @@ window.addEventListener('load',()=>{
 
 function waitForFirebase(cb){if(window.firebaseReady)cb();else window.addEventListener('firebaseReady',cb,{once:true});}
 function loadScoresIntoM(){if(!appData.matchScores)return;M.forEach(m=>{m.score=appData.matchScores[m.id]||null;});}
-function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null,mu=appData.users?{...appData.users}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;if(mu)appData.users=mu;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};}}
+function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim'),snap=>{const data=snap.val();if(data){if(isSaving&&currentUser){const mb=appData.bets&&appData.bets[currentUser.fbKey]?{...appData.bets[currentUser.fbKey]}:null,ms=appData.scores?{...appData.scores}:null,mm=appData.matchScores?{...appData.matchScores}:null,msp=appData.specialBets?{...appData.specialBets}:null,mu=appData.users?{...appData.users}:null;appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};if(!appData.settings)appData.settings={};if(mb)appData.bets[currentUser.fbKey]=mb;if(ms)appData.scores=ms;if(mm)appData.matchScores=mm;if(msp)appData.specialBets=msp;if(mu)appData.users=mu;}else{appData=data;if(!appData.scores)appData.scores={};if(!appData.bets)appData.bets={};if(!appData.matchScores)appData.matchScores={};if(!appData.specialBets)appData.specialBets={};if(!appData.users)appData.users={};if(!appData.specialResults)appData.specialResults={};if(!appData.settings)appData.settings={};}}
 
   // טען משתמשים מ-Firebase
   if(appData.users&&Object.keys(appData.users).length>0){
@@ -484,7 +536,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -573,6 +625,60 @@ function saveSpecialResults(){
   setTimeout(()=>ok.style.display='none',6000);
 }
 
+function previewBubble(){
+  const txt=document.getElementById('bubble-text').value||'🎯 מדויק! הוא רואה הכל 👁️';
+  const p=document.getElementById('bubble-preview');
+  if(p)p.textContent=txt;
+}
+
+function saveBubbleText(){
+  if(currentUser.username!=='dekel')return;
+  const txt=document.getElementById('bubble-text').value.trim();
+  if(!txt){showToast('הכנס טקסט');return;}
+  if(!appData.settings)appData.settings={};
+  appData.settings.bubbleText=txt;
+  saveToFirebase();
+  const ok=document.getElementById('bubble-saved');
+  ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',2000);
+}
+
+function loadBubbleAdmin(){
+  const txt=(appData.settings&&appData.settings.bubbleText)||'🎯 מדויק! הוא רואה הכל 👁️';
+  const inp=document.getElementById('bubble-text');
+  if(inp){inp.value=txt;previewBubble();}
+}
+
+function showCelebrationBubbles(exactWinners){
+  // exactWinners = מערך של fbKey של שחקנים שפגעו מדויק
+  if(!exactWinners||exactWinners.length===0)return;
+  const bubbleText=(appData.settings&&appData.settings.bubbleText)||'🎯 מדויק! הוא רואה הכל 👁️';
+
+  // חכה שהטבלה תרנדר ואז הוסף בועות
+  setTimeout(()=>{
+    exactWinners.forEach(fbKey=>{
+      // מצא את הכרטיס לפי שם השחקן
+      const u=Object.values(USERS).find(x=>x.fbKey===fbKey);
+      if(!u)return;
+      const cards=document.querySelectorAll('#leaderboard-grid .leader-card');
+      cards.forEach(card=>{
+        const nameEl=card.querySelector('div[style*="1.1rem"]');
+        if(nameEl&&nameEl.textContent===u.display){
+          // הסר בועה קיימת
+          const old=card.querySelector('.celebration-bubble');
+          if(old)old.remove();
+          const bubble=document.createElement('div');
+          bubble.className='celebration-bubble';
+          bubble.textContent=bubbleText;
+          card.appendChild(bubble);
+          // הסר אחרי 4 שניות
+          setTimeout(()=>bubble.remove(),4200);
+        }
+      });
+    });
+  },300);
+}
+
 function renderUserManagement(){
   const c=document.getElementById('user-management-list');
   if(!c||!usersLoaded)return;
@@ -622,7 +728,26 @@ function recalcAllScores(){
     });
   }
 }
-function adminSetScore(){if(currentUser.username!=='dekel')return;const matchId=document.getElementById('admin-match').value,h=parseInt(document.getElementById('admin-home').value),a=parseInt(document.getElementById('admin-away').value);if(!matchId){showToast('בחר משחק');return;}if(isNaN(h)||isNaN(a)){showToast('הכנס תוצאה');return;}const m=M.find(x=>x.id===matchId);if(!m)return;m.score=[h,a];if(!appData.matchScores)appData.matchScores={};appData.matchScores[matchId]=[h,a];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderBetsList();renderAdminResults();populateAdminSelect();const ok=document.getElementById('admin-ok');ok.innerHTML='✅ נשמר! | '+Object.entries(USERS).map(([k,u])=>`${u.display}:${appData.scores[u.fbKey]||0}נק'`).join(' | ');ok.style.display='block';setTimeout(()=>ok.style.display='none',5000);}
+function adminSetScore(){if(currentUser.username!=='dekel')return;const matchId=document.getElementById('admin-match').value,h=parseInt(document.getElementById('admin-home').value),a=parseInt(document.getElementById('admin-away').value);if(!matchId){showToast('בחר משחק');return;}if(isNaN(h)||isNaN(a)){showToast('הכנס תוצאה');return;}const m=M.find(x=>x.id===matchId);if(!m)return;m.score=[h,a];if(!appData.matchScores)appData.matchScores={};appData.matchScores[matchId]=[h,a];
+
+// מצא מי פגע מדויק במשחק הזה
+const exactWinners=[];
+Object.entries(USERS).forEach(([k,u])=>{
+  const bet=(appData.bets&&appData.bets[u.fbKey]&&appData.bets[u.fbKey][matchId]);
+  if(bet&&bet.home===h&&bet.away===a)exactWinners.push(u.fbKey);
+});
+
+recalcAllScores();saveToFirebase();
+
+// נווט לטבלה והצג בועות
+showPage('leaderboard',document.querySelector('nav button'));
+renderLeaderboard();
+if(exactWinners.length>0)showCelebrationBubbles(exactWinners);
+
+renderMatches();renderBetsList();renderAdminResults();populateAdminSelect();
+const ok=document.getElementById('admin-ok');
+ok.innerHTML='✅ נשמר! '+( exactWinners.length>0 ? `🎯 פגעו מדויק: ${exactWinners.map(fk=>Object.values(USERS).find(u=>u.fbKey===fk)?.display||fk).join(', ')}` : '')+'<br>'+Object.entries(USERS).map(([k,u])=>`${u.display}:${appData.scores[u.fbKey]||0}נק'`).join(' | ');
+ok.style.display='block';setTimeout(()=>ok.style.display='none',6000);}
 function renderAdminResults(){const list=document.getElementById('admin-results-list');if(!list)return;const ws=M.filter(m=>m.score);if(ws.length===0){list.innerHTML='<div style="color:var(--muted);text-align:center;padding:14px">עוד לא הוכנסו תוצאות</div>';return;}list.innerHTML=ws.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #333;gap:8px"><div style="font-size:.83rem">${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''}</div><div style="display:flex;align-items:center;gap:8px"><div style="background:#111;border-radius:6px;padding:3px 11px;font-weight:900;color:var(--gold)">${m.score[0]}–${m.score[1]}</div><button onclick="adminDeleteScore('${m.id}')" style="background:rgba(192,0,10,.2);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.76rem;font-family:inherit">מחק</button></div></div>`).join('');}
 function adminDeleteScore(matchId){if(currentUser.username!=='dekel')return;const m=M.find(x=>x.id===matchId);if(!m)return;m.score=null;if(appData.matchScores)delete appData.matchScores[matchId];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderAdminResults();populateAdminSelect();showToast('✅ נמחק');}
 

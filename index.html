@@ -276,19 +276,16 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   <div class="content">
     <div style="font-size:1.3rem;font-weight:900;color:var(--gold);margin-bottom:18px">⚙️ פאנל אדמין</div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
-      <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:6px">🎉 עריכת בועת ניצחון</div>
-      <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">הבועה מופיעה מעל שם השחקן בטבלה כשהוא פוגע בתוצאה מדויקת</div>
-      <div style="margin-bottom:10px">
-        <label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">טקסט הבועה</label>
-        <input id="bubble-text" type="text" class="form-select" placeholder="לדוגמה: 🎯 מדויק! הוא רואה הכל 👁️" style="font-size:.9rem" oninput="previewBubble()">
-      </div>
-      <div style="margin-bottom:14px">
+      <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:6px">🎉 עריכת בועות ניצחון</div>
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:16px">הגדר טקסט בועה אישי לכל שחקן — יופיע מעל השם שלו בטבלה כשפוגע מדויק</div>
+      <div id="bubble-players-list"></div>
+      <div style="margin-top:14px">
         <label style="font-size:.77rem;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">תצוגה מקדימה</label>
-        <div style="background:#111;border-radius:10px;padding:16px;text-align:center;min-height:60px;display:flex;align-items:center;justify-content:center">
-          <div id="bubble-preview" style="background:linear-gradient(135deg,#f5c800,#ff9500);color:#000;font-size:.82rem;font-weight:900;padding:8px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 20px rgba(245,200,0,0.5)">🎯 מדויק! הוא רואה הכל 👁️</div>
+        <div style="background:#111;border-radius:10px;padding:14px;text-align:center;display:flex;align-items:center;justify-content:center">
+          <div id="bubble-preview" style="background:linear-gradient(135deg,#f5c800,#ff9500);color:#000;font-size:.82rem;font-weight:900;padding:8px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 20px rgba(245,200,0,0.5)">🎯 מדויק!</div>
         </div>
       </div>
-      <button class="submit-btn" onclick="saveBubbleText()">💾 שמור</button>
+      <button class="submit-btn" style="margin-top:14px;width:100%" onclick="saveBubbleTexts()">💾 שמור את כל הבועות</button>
       <div id="bubble-saved" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem">✅ נשמר!</div>
     </div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
@@ -542,7 +539,21 @@ function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
 function fmtShort(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});}
 
-function renderLeaderboard(){const g=document.getElementById('leaderboard-grid');if(!g)return;const medals=['🥇','🥈','🥉','4️⃣'];const rows=Object.entries(USERS).map(([k,u])=>({key:k,fbKey:u.fbKey,display:u.display,pts:(appData.scores&&appData.scores[u.fbKey])||0})).sort((a,b)=>b.pts-a.pts);g.innerHTML=rows.map((r,i)=>`<div class="leader-card rank-${i+1}" onclick="openProfile('${r.key}')"><div style="font-size:1.8rem;margin-bottom:6px">${medals[i]||''}</div><div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">${r.display}</div><div style="font-size:2.2rem;font-weight:900;color:var(--gold);line-height:1">${r.pts}</div><div style="font-size:.72rem;color:var(--muted)">נקודות · לחץ לפרטים</div></div>`).join('');}
+function renderLeaderboard(){
+  const g=document.getElementById('leaderboard-grid');
+  if(!g)return;
+  const medals=['🥇','🥈','🥉','4️⃣'];
+  const rows=Object.entries(USERS)
+    .map(([k,u])=>({key:k,fbKey:u.fbKey,display:u.display,pts:(appData.scores&&appData.scores[u.fbKey])||0}))
+    .sort((a,b)=>b.pts-a.pts);
+  g.innerHTML=rows.map((r,i)=>`
+    <div class="leader-card rank-${i+1}" onclick="openProfile('${r.key}')">
+      <div style="font-size:1.8rem;margin-bottom:6px">${medals[i]||''}</div>
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px" data-player="${r.key}">${r.display}</div>
+      <div style="font-size:2.2rem;font-weight:900;color:var(--gold);line-height:1">${r.pts}</div>
+      <div style="font-size:.72rem;color:var(--muted)">נקודות · לחץ לפרטים</div>
+    </div>`).join('');
+}
 
 function openProfile(username){const u=USERS[username];if(!u)return;const pts=(appData.scores&&appData.scores[u.fbKey])||0;document.getElementById('profile-avatar').textContent=u.display[0];document.getElementById('profile-name').textContent=u.display;document.getElementById('profile-pts').textContent=pts+' נקודות';const userBets=(appData.bets&&appData.bets[u.fbKey])||{};const betIds=Object.keys(userBets);let html='';if(betIds.length===0){html='<div style="color:var(--muted);text-align:center;padding:20px">עוד לא הגיש הימורים</div>';}else{const sorted=betIds.sort((a,b)=>{const ma=M.find(x=>x.id===a),mb=M.find(x=>x.id===b);if(!ma)return 1;if(!mb)return -1;return new Date(ma.kick)-new Date(mb.kick);});// רק משחקים שכבר התחילו (נעולים)
 const lockedBets=sorted.filter(matchId=>{const m=M.find(x=>x.id===matchId);return m&&isLocked(m.kick);});const hiddenCount=sorted.length-lockedBets.length;if(lockedBets.length===0){html='<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים שהסתיימו עדיין</div>';}else{html=lockedBets.map(matchId=>{const bet=userBets[matchId],m=M.find(x=>x.id===matchId);if(!m)return'';const hf=FLAGS[m.home]||'',af=FLAGS[m.away]||'';let result='';if(m.score){const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D',exact=bet.home===m.score[0]&&bet.away===m.score[1];if(exact)result='<span style="color:var(--green);font-weight:900">✅+3</span>';else if(bw===rw)result='<span style="color:var(--green);font-weight:900">✅+1</span>';else result='<span style="color:var(--red);font-weight:900">❌</span>';}else result='<span style="color:var(--muted)">⏳</span>';return`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #333;gap:8px"><div><div style="font-size:.86rem;font-weight:700">${hf} ${m.home} – ${m.away} ${af}</div><div style="font-size:.7rem;color:var(--muted)">${fmtShort(m.kick)} · ${m.venue||''}</div></div><div style="display:flex;align-items:center;gap:8px"><div style="background:#111;border-radius:6px;padding:3px 11px;font-weight:900;color:var(--gold);font-size:.92rem">${bet.home}–${bet.away}</div>${result}</div></div>`;}).filter(Boolean).join('');}if(hiddenCount>0){html+=`<div style="text-align:center;padding:12px;color:var(--muted);font-size:.8rem;margin-top:6px">🔒 ${hiddenCount} הימורים נוספים — יוצגו לאחר שריקת הפתיחה של כל משחק</div>`;}}const sb=(appData.specialBets&&appData.specialBets[u.fbKey])||{};if(sb.winner||sb.runnerup||sb.topscorer){html+=`<div style="margin-top:14px;padding:11px;background:#111;border-radius:10px"><div style="font-size:.8rem;font-weight:900;color:var(--gold);margin-bottom:7px">🌟 הימורים מיוחדים</div>${sb.winner?`<div style="font-size:.83rem;margin-bottom:3px">🏆 זוכה: <strong>${sb.winner}</strong></div>`:''}${sb.runnerup?`<div style="font-size:.83rem;margin-bottom:3px">🥈 סגנית: <strong>${sb.runnerup}</strong></div>`:''}${sb.topscorer?`<div style="font-size:.83rem">👟 מלך שערים: <strong>${sb.topscorer}</strong></div>`:''}</div>`;}document.getElementById('profile-bets-list').innerHTML=html;document.getElementById('profile-modal').style.display='flex';}
@@ -625,53 +636,67 @@ function saveSpecialResults(){
   setTimeout(()=>ok.style.display='none',6000);
 }
 
-function previewBubble(){
-  const txt=document.getElementById('bubble-text').value||'🎯 מדויק! הוא רואה הכל 👁️';
+function loadBubbleAdmin(){
+  const bubbles=(appData.settings&&appData.settings.bubbles)||{};
+  const container=document.getElementById('bubble-players-list');
+  if(!container)return;
+  container.innerHTML=Object.entries(USERS).map(([k,u])=>`
+    <div style="margin-bottom:12px">
+      <label style="font-size:.8rem;font-weight:900;display:block;margin-bottom:5px">${u.display}</label>
+      <input id="bubble-${k}" type="text" class="form-select"
+        placeholder="טקסט בועה לדוגמה: 🎯 ${u.display} רואה הכל!"
+        value="${bubbles[k]||''}"
+        style="font-size:.88rem"
+        oninput="previewBubble('${k}')">
+    </div>`).join('');
+}
+
+function previewBubble(userKey){
+  const inp=document.getElementById('bubble-'+(userKey||Object.keys(USERS)[0]));
+  const txt=inp?inp.value||'🎯 מדויק!':'🎯 מדויק!';
   const p=document.getElementById('bubble-preview');
   if(p)p.textContent=txt;
 }
 
-function saveBubbleText(){
+function saveBubbleTexts(){
   if(currentUser.username!=='dekel')return;
-  const txt=document.getElementById('bubble-text').value.trim();
-  if(!txt){showToast('הכנס טקסט');return;}
   if(!appData.settings)appData.settings={};
-  appData.settings.bubbleText=txt;
+  if(!appData.settings.bubbles)appData.settings.bubbles={};
+  Object.keys(USERS).forEach(k=>{
+    const inp=document.getElementById('bubble-'+k);
+    if(inp&&inp.value.trim())appData.settings.bubbles[k]=inp.value.trim();
+    else if(inp&&!inp.value.trim())delete appData.settings.bubbles[k];
+  });
   saveToFirebase();
   const ok=document.getElementById('bubble-saved');
   ok.style.display='block';
   setTimeout(()=>ok.style.display='none',2000);
 }
 
-function loadBubbleAdmin(){
-  const txt=(appData.settings&&appData.settings.bubbleText)||'🎯 מדויק! הוא רואה הכל 👁️';
-  const inp=document.getElementById('bubble-text');
-  if(inp){inp.value=txt;previewBubble();}
-}
+// שמור תאימות לשם ישן
+function saveBubbleText(){ saveBubbleTexts(); }
 
 function showCelebrationBubbles(exactWinners){
-  // exactWinners = מערך של fbKey של שחקנים שפגעו מדויק
   if(!exactWinners||exactWinners.length===0)return;
-  const bubbleText=(appData.settings&&appData.settings.bubbleText)||'🎯 מדויק! הוא רואה הכל 👁️';
+  const bubbles=(appData.settings&&appData.settings.bubbles)||{};
+  const DEFAULT='🎯 מדויק!';
 
-  // חכה שהטבלה תרנדר ואז הוסף בועות
   setTimeout(()=>{
     exactWinners.forEach(fbKey=>{
-      // מצא את הכרטיס לפי שם השחקן
       const u=Object.values(USERS).find(x=>x.fbKey===fbKey);
       if(!u)return;
+      const uKey=Object.keys(USERS).find(k=>USERS[k].fbKey===fbKey);
+      const txt=bubbles[uKey]||DEFAULT;
       const cards=document.querySelectorAll('#leaderboard-grid .leader-card');
       cards.forEach(card=>{
-        const nameEl=card.querySelector('div[style*="1.1rem"]');
-        if(nameEl&&nameEl.textContent===u.display){
-          // הסר בועה קיימת
+        const nameEl=card.querySelector('[data-player]');
+        if(nameEl&&nameEl.dataset.player===uKey){
           const old=card.querySelector('.celebration-bubble');
           if(old)old.remove();
           const bubble=document.createElement('div');
           bubble.className='celebration-bubble';
-          bubble.textContent=bubbleText;
+          bubble.textContent=txt;
           card.appendChild(bubble);
-          // הסר אחרי 4 שניות
           setTimeout(()=>bubble.remove(),4200);
         }
       });

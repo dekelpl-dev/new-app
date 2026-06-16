@@ -45,6 +45,11 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 .content{max-width:1200px;margin:0 auto;padding:24px 16px;}
 .section-title{text-align:center;font-size:1.4rem;font-weight:900;color:var(--gold);margin-bottom:18px;}
 .leaderboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:24px;}
+.leader-card{background:var(--card);border-radius:14px;padding:20px;text-align:center;border:2px solid #444;cursor:pointer;transition:transform .2s,border-color .2s;}
+.leader-card:hover{transform:translateY(-3px);border-color:#666;}
+.leader-card.rank-1{border-color:var(--gold);}
+.leader-card.rank-2{border-color:#bbb;}
+.leader-card.rank-3{border-color:#cd7f32;}
 /* CELEBRATION BUBBLE */
 .celebration-bubble {
   position:absolute;

@@ -269,6 +269,19 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   </div>
 </div>
 
+<!-- WHERE POPUP -->
+<div id="where-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeWherePopup()">
+  <div style="background:#1a1a2e;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:1.15rem;font-weight:900">📍 איפה יושבים?</div>
+      <button onclick="closeWherePopup()" style="background:rgba(255,255,255,.1);border:none;color:#fff;font-size:1.2rem;width:32px;height:32px;border-radius:50%;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:16px">הצביעו איפה הכי נוח לכם — ונחליט ביחד</div>
+    <div id="where-options-list"></div>
+    <div id="where-results" style="margin-top:18px"></div>
+  </div>
+</div>
+
 <!-- GROUP BET - ההימור המנצח -->
 <div class="page" id="page-groupbet">
   <div class="content">
@@ -909,6 +922,77 @@ function renderAdminResults(){const list=document.getElementById('admin-results-
 function adminDeleteScore(matchId){if(currentUser.username!=='dekel')return;const m=M.find(x=>x.id===matchId);if(!m)return;m.score=null;if(appData.matchScores)delete appData.matchScores[matchId];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderAdminResults();populateAdminSelect();showToast('✅ נמחק');}
 
 const TEAMS=[{f:'🇧🇷',n:'ברזיל',c:72,s:['ויניציוס+רודריגו','ניסיון עולמי'],v:'מועדפת. אבל ברזיל תמיד מאכזבת.'},{f:'🇦🇷',n:'ארגנטינה',c:68,s:['אלוף 2022','מסי האחרון'],v:'מגנים על הכתר.'},{f:'🇫🇷',n:'צרפת',c:70,s:['אמבפה','סגל מטורף'],v:'הכי מוכשר.'},{f:'🇩🇪',n:'גרמניה',c:58,s:['ביתיים!','מוסיאלה'],v:'רעבים לנצח.'},{f:'🇪🇸',n:'ספרד',c:65,s:['יאמאל (17!)','טיקי-טאקה'],v:'המשחק הכי יפה.'},{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'אנגליה',c:60,s:['בלינגהאם','סאקה'],v:'הפעם?'},{f:'🇵🇹',n:'פורטוגל',c:55,s:['קוניאל','פליקס'],v:'דור חדש.'},{f:'🇲🇦',n:'מרוקו',c:50,s:['חצי גמר 2022','הגנה'],v:'סוס שחור.'}];
+// ===== איפה יושבים — popup =====
+const WHERE_OPTIONS = [
+  {id:'murphys',emoji:'🍺',name:"מרפי'ס פולג — נתניה",desc:'פאב אירי, מסכים מכל עבר, שידורים עם סאונד',addr:'גיבורי ישראל 17, יכין סנטר, א.ת. פולג, נתניה',maps:'https://maps.app.goo.gl/Murphys'},
+  {id:'dalairon',emoji:'🏉',name:"דאל איירן — נתניה",desc:'פאב אירי ססגוני, אוכל טוב, אווירה מונדיאל',addr:'אריה רגב 2, א.ת. פולג, נתניה',maps:'https://maps.app.goo.gl/DalAiron'},
+  {id:'herzl31',emoji:'🍕',name:'לגנסקי — נתניה',desc:'פיצה + בירה + כדורגל, הרצל 31, פתוח עד 03:00',addr:'הרצל 31, נתניה',maps:'https://maps.app.goo.gl/Lagnski'},
+  {id:'natanyonatan',emoji:'🥂',name:'נתן יונתן — נתניה',desc:'בר מרכזי בנתניה, פתוח עד חצות ועוד',addr:'נתן יונתן 10, נתניה',maps:'https://maps.app.goo.gl/NatanYonatan'},
+  {id:'hadera_bar',emoji:'🎯',name:'בר בחדרה',desc:'אפשרות קרובה לחדרה — לחפש ביחד מקום שמשדר',addr:'מרכז חדרה',maps:'https://www.google.com/maps/search/פאב+חדרה'},
+  {id:'home',emoji:'🏠',name:'אצל מישהו בבית',desc:'כיפי, בלי תור, בלי תקרה — מי מארח?',addr:'',maps:''},
+];
+
+function openWherePopup(){
+  const popup=document.getElementById('where-popup');
+  popup.style.display='flex';
+  renderWhereOptions();
+}
+function closeWherePopup(){
+  document.getElementById('where-popup').style.display='none';
+}
+function renderWhereOptions(){
+  if(!currentUser)return;
+  const wb=(appData.groupBet&&appData.groupBet.whereVotes)||{};
+  const myVote=wb[currentUser.fbKey];
+
+  const optHtml=WHERE_OPTIONS.map(opt=>{
+    const votes=Object.entries(wb).filter(([k,v])=>v===opt.id);
+    const names=votes.map(([k])=>Object.values(USERS).find(u=>u.fbKey===k)?.display||k).join(', ');
+    const isMine=myVote===opt.id;
+    return `<div style="background:${isMine?'rgba(245,200,0,.12)':'rgba(255,255,255,.04)'};border:1.5px solid ${isMine?'var(--gold)':'rgba(255,255,255,.1)'};border-radius:12px;padding:13px 14px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.95rem;font-weight:900">${opt.emoji} ${opt.name}</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${opt.desc}</div>
+          ${opt.addr?`<div style="font-size:.72rem;color:#888;margin-top:2px">📍 ${opt.addr}</div>`:''}
+          ${votes.length>0?`<div style="font-size:.73rem;color:var(--gold);margin-top:5px">👍 ${names} (${votes.length})</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center;flex-shrink:0">
+          <button onclick="voteWhere('${opt.id}')" style="background:${isMine?'var(--gold)':'rgba(255,255,255,.1)'};color:${isMine?'#000':'#fff'};border:none;border-radius:8px;padding:7px 13px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap">${isMine?'✅ בחרתי':'בחר'}</button>
+          ${opt.maps?`<a href="${opt.maps}" target="_blank" style="font-size:.7rem;color:#5b9bd5;text-decoration:none">🗺️ מפה</a>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('where-options-list').innerHTML=optHtml;
+
+  // results summary
+  const counts={};
+  Object.values(wb).forEach(v=>{if(v)counts[v]=(counts[v]||0)+1;});
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  const rEl=document.getElementById('where-results');
+  if(top&&top[1]>0){
+    const opt=WHERE_OPTIONS.find(o=>o.id===top[0]);
+    rEl.innerHTML=`<div style="background:rgba(91,155,213,.1);border:1px solid rgba(91,155,213,.3);border-radius:10px;padding:12px;text-align:center;font-size:.85rem">
+      🏆 מוביל כרגע: <strong style="color:var(--gold)">${opt?opt.emoji+' '+opt.name:top[0]}</strong> עם ${top[1]} קולות
+    </div>`;
+  } else {
+    rEl.innerHTML='';
+  }
+}
+function voteWhere(optId){
+  if(!currentUser)return;
+  if(!appData.groupBet)appData.groupBet={};
+  if(!appData.groupBet.whereVotes)appData.groupBet.whereVotes={};
+  const prev=appData.groupBet.whereVotes[currentUser.fbKey];
+  if(prev===optId){delete appData.groupBet.whereVotes[currentUser.fbKey];}
+  else{appData.groupBet.whereVotes[currentUser.fbKey]=optId;}
+  saveToFirebase();
+  renderWhereOptions();
+  showToast(prev===optId?'הסרת בחירה':'✅ בחרת!');
+}
+
 // ===== ההימור המנצח =====
 const GROUP_BET_MATCHES = [
   {id:'m23',label:'גאנה 🆚 פנמה',date:'18.6 02:00'},
@@ -976,6 +1060,7 @@ function renderGroupBet(){
       <div style="font-size:1.1rem;color:var(--gold);font-weight:900">${sel?sel.label:gbd.selected}</div>
       ${sel?`<div style="font-size:.8rem;color:var(--muted);margin-top:4px">${sel.date}</div>`:''}
       ${selNames?`<div style="font-size:.82rem;margin-top:8px">🙋 הצביעו: ${selNames}</div>`:''}
+      <button onclick="openWherePopup()" style="margin-top:16px;background:var(--gold);color:#000;border:none;border-radius:10px;padding:11px 22px;font-family:inherit;font-size:.95rem;font-weight:900;cursor:pointer;width:100%">📍 איפה יושבים?</button>
     </div>`;
   } else {
     // טבלת ציון ביניים

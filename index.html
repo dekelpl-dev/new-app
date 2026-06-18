@@ -165,6 +165,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
       <button onclick="showPage('bets',this)">🎯 הימורים</button>
       <button onclick="showPage('special',this)">🌟 מיוחדים</button>
       <button onclick="showPage('analysis',this)">🧠 ניתוח</button>
+      <button onclick="showPage('groupbet',this)">🍿 ההימור המנצח</button>
       <button onclick="showPage('explain',this)">📖 הסבר</button>
       <button id="admin-btn" onclick="showPage('admin',this)" style="display:none;background:rgba(245,200,0,.2);border-color:var(--gold);color:var(--gold)">⚙️ אדמין</button>
     </nav>
@@ -273,6 +274,24 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
     <div class="explain-card"><h3>🌟 ניקוד הימורים מיוחדים</h3><ul><li><strong>זוכה נכון</strong> – 10 נקודות</li><li><strong>סגנית נכונה</strong> – 10 נקודות</li><li><strong>מלך השערים נכון</strong> – 5 נקודות</li><li><strong>שלושתם יחד</strong> – בונוס! סה"כ <strong style="color:var(--gold)">35 נקודות</strong> (במקום 25)</li></ul></div>
     <div class="explain-card"><h3>🔒 נעילה</h3><p>כל הימור נועל בשריקת הפתיחה לפי שעון ישראל.</p></div>
     <div class="explain-card"><h3>📺 שידורים</h3><p>כל המשחקים בכאן 11 ובספורט 1 של צ'רלטון.</p></div>
+  </div>
+</div>
+
+<!-- GROUP BET - ההימור המנצח -->
+<div class="page" id="page-groupbet">
+  <div class="content">
+    <div class="section-title">🍿 ההימור המנצח</div>
+    <div style="font-size:.84rem;color:var(--muted);text-align:center;margin-bottom:20px">בחרו משחק — ונקבע ביחד מתי אנחנו נפגשים לראות אותו!</div>
+
+    <div id="groupbet-voted-note" style="display:none;background:rgba(245,200,0,.12);border:1px solid rgba(245,200,0,.35);border-radius:12px;padding:13px 16px;margin-bottom:18px;font-size:.86rem;color:var(--gold);font-weight:700;text-align:center">
+      ✅ הצבעת! אפשר לשנות בכל עת עד שהמשחק מתחיל
+    </div>
+
+    <div style="font-size:.9rem;font-weight:900;color:var(--gold);margin-bottom:12px">🗓️ משחקים שעוד לא שוחקו — בשבועיים הקרובים:</div>
+
+    <div id="groupbet-list"></div>
+
+    <div id="groupbet-results" style="margin-top:26px"></div>
   </div>
 </div>
 
@@ -538,7 +557,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='groupbet')renderGroupBet();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -783,6 +802,124 @@ function adminDeleteScore(matchId){if(currentUser.username!=='dekel')return;cons
 
 const TEAMS=[{f:'🇧🇷',n:'ברזיל',c:72,s:['ויניציוס+רודריגו','ניסיון עולמי'],v:'מועדפת. אבל ברזיל תמיד מאכזבת.'},{f:'🇦🇷',n:'ארגנטינה',c:68,s:['אלוף 2022','מסי האחרון'],v:'מגנים על הכתר.'},{f:'🇫🇷',n:'צרפת',c:70,s:['אמבפה','סגל מטורף'],v:'הכי מוכשר.'},{f:'🇩🇪',n:'גרמניה',c:58,s:['ביתיים!','מוסיאלה'],v:'רעבים לנצח.'},{f:'🇪🇸',n:'ספרד',c:65,s:['יאמאל (17!)','טיקי-טאקה'],v:'המשחק הכי יפה.'},{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'אנגליה',c:60,s:['בלינגהאם','סאקה'],v:'הפעם?'},{f:'🇵🇹',n:'פורטוגל',c:55,s:['קוניאל','פליקס'],v:'דור חדש.'},{f:'🇲🇦',n:'מרוקו',c:50,s:['חצי גמר 2022','הגנה'],v:'סוס שחור.'}];
 function renderAnalysis(){const g=document.getElementById('analysis-grid');if(!g)return;g.innerHTML=TEAMS.map(t=>`<div class="team-card"><div style="font-size:1.9rem;margin-bottom:5px">${t.f}</div><div style="font-size:.98rem;font-weight:900;margin-bottom:5px">${t.n}</div><div style="font-size:.73rem;color:var(--muted)">${t.c}% סיכוי גמר</div><div class="chance-bar-bg"><div class="chance-bar" style="width:${t.c}%"></div></div><ul style="padding-right:15px">${t.s.map(x=>`<li style="font-size:.78rem;color:#ccc;line-height:1.6">✅ ${x}</li>`).join('')}</ul><div style="font-size:.78rem;color:var(--gold);margin-top:7px;font-style:italic">💬 ${t.v}</div></div>`).join('');}
+// ===== ההימור המנצח =====
+const GROUP_BET_MATCHES = [
+  {id:'m23',label:'גאנה 🆚 פנמה',date:'18.6 02:00'},
+  {id:'m25',label:"צ'כיה 🆚 דרום אפריקה",date:'18.6 19:00'},
+  {id:'m26',label:'שווייץ 🆚 בוסניה',date:'18.6 22:00'},
+  {id:'m29',label:'ארה"ב 🆚 אוסטרליה',date:'19.6 22:00'},
+  {id:'m30',label:'סקוטלנד 🆚 מרוקו',date:'20.6 01:00'},
+  {id:'m31',label:'ברזיל 🆚 האיטי',date:'20.6 04:00'},
+  {id:'m33',label:'הולנד 🆚 שבדיה',date:'20.6 20:00'},
+  {id:'m34',label:'גרמניה 🆚 חוף השנהב',date:'20.6 23:00'},
+  {id:'m37',label:'ספרד 🆚 ערב הסעודית',date:'21.6 19:00'},
+  {id:'m41',label:'ארגנטינה 🆚 אוסטריה',date:'22.6 20:00'},
+  {id:'m42',label:'צרפת 🆚 עיראק',date:'23.6 00:00'},
+  {id:'m45',label:'פורטוגל 🆚 אוזבקיסטן',date:'23.6 20:00'},
+  {id:'m46',label:'אנגליה 🆚 גאנה',date:'23.6 23:00'},
+  {id:'m51',label:'סקוטלנד 🆚 ברזיל',date:'25.6 01:00'},
+  {id:'m55',label:'אקוודור 🆚 גרמניה',date:'25.6 23:00'},
+  {id:'m61',label:'נורבגיה 🆚 צרפת',date:'26.6 22:00'},
+];
+
+function renderGroupBet(){
+  if(!currentUser)return;
+  const gbd=appData.groupBet||{};
+  const myVote=gbd.votes&&gbd.votes[currentUser.fbKey];
+  const note=document.getElementById('groupbet-voted-note');
+  if(note)note.style.display=myVote?'block':'none';
+
+  // רשימת משחקים
+  const now=new Date();
+  const available=GROUP_BET_MATCHES.filter(gm=>{
+    const m=M.find(x=>x.id===gm.id);
+    return m&&new Date(m.kick)>now&&!m.score;
+  });
+
+  const list=document.getElementById('groupbet-list');
+  if(!list)return;
+
+  list.innerHTML=available.map(gm=>{
+    const votes=gbd.votes?Object.entries(gbd.votes).filter(([k,v])=>v===gm.id):[];
+    const voterNames=votes.map(([k])=>Object.values(USERS).find(u=>u.fbKey===k)?.display||k).join(', ');
+    const isMyVote=myVote===gm.id;
+    const isLocked=gbd.selected===gm.id;
+    return `<div style="background:${isMyVote?'rgba(245,200,0,.12)':'var(--card)'};border:2px solid ${isMyVote?'var(--gold)':'rgba(255,255,255,.08)'};border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:.95rem;font-weight:900">${gm.label}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:3px">📅 ${gm.date} (שעון ישראל)</div>
+        ${votes.length>0?`<div style="font-size:.75rem;color:var(--gold);margin-top:5px">👥 מצביעים (${votes.length}): ${voterNames}</div>`:''}
+      </div>
+      <button onclick="voteGroupBet('${gm.id}')" style="background:${isMyVote?'var(--gold)':'rgba(255,255,255,.1)'};color:${isMyVote?'#000':'#fff'};border:none;border-radius:8px;padding:8px 16px;font-family:inherit;font-size:.83rem;font-weight:700;cursor:pointer;white-space:nowrap">
+        ${isMyVote?'✅ הצבעתי':'הצבע'}
+      </button>
+    </div>`;
+  }).join('');
+
+  // תוצאות
+  const results=document.getElementById('groupbet-results');
+  if(!results)return;
+
+  if(gbd.selected){
+    const sel=GROUP_BET_MATCHES.find(g=>g.id===gbd.selected);
+    const selVotes=gbd.votes?Object.entries(gbd.votes).filter(([k,v])=>v===gbd.selected):[];
+    const selNames=selVotes.map(([k])=>Object.values(USERS).find(u=>u.fbKey===k)?.display||k).join(', ');
+    results.innerHTML=`<div style="background:rgba(46,204,113,.1);border:2px solid rgba(46,204,113,.4);border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:1.4rem;font-weight:900;margin-bottom:6px">🎉 המשחק שנבחר!</div>
+      <div style="font-size:1.1rem;color:var(--gold);font-weight:900">${sel?sel.label:gbd.selected}</div>
+      ${sel?`<div style="font-size:.8rem;color:var(--muted);margin-top:4px">${sel.date}</div>`:''}
+      ${selNames?`<div style="font-size:.82rem;margin-top:8px">🙋 הצביעו: ${selNames}</div>`:''}
+    </div>`;
+  } else {
+    // טבלת ציון ביניים
+    const voteCounts={};
+    if(gbd.votes){Object.values(gbd.votes).forEach(v=>{voteCounts[v]=(voteCounts[v]||0)+1;});}
+    const sorted=Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
+    if(sorted.length>0){
+      const html=sorted.map(([id,cnt])=>{
+        const gm=GROUP_BET_MATCHES.find(g=>g.id===id);
+        const voterNames=(gbd.votes?Object.entries(gbd.votes).filter(([k,v])=>v===id).map(([k])=>Object.values(USERS).find(u=>u.fbKey===k)?.display||k):[] ).join(', ');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #333;gap:8px">
+          <div><div style="font-size:.88rem;font-weight:700">${gm?gm.label:id}</div><div style="font-size:.73rem;color:var(--muted)">${voterNames}</div></div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--gold)">${cnt} 🗳️</div>
+        </div>`;
+      }).join('');
+      results.innerHTML=`<div style="background:var(--card);border-radius:12px;padding:16px">
+        <div style="font-size:.9rem;font-weight:900;color:var(--gold);margin-bottom:12px">📊 ניצחון ביניים</div>
+        ${html}
+        ${currentUser.username==='dekel'?`<div style="margin-top:14px;font-size:.8rem;color:var(--muted)">אדמין: <a href="#" onclick="confirmGroupBetWinner(event)" style="color:var(--gold)">אשר ידנית את המשחק המנצח</a></div>`:''}
+      </div>`;
+    } else {
+      results.innerHTML=`<div style="text-align:center;color:var(--muted);padding:20px;font-size:.86rem">עוד אף אחד לא הצביע — תהיה הראשון! 👆</div>`;
+    }
+  }
+}
+
+function voteGroupBet(matchId){
+  if(!currentUser)return;
+  if(!appData.groupBet)appData.groupBet={};
+  if(!appData.groupBet.votes)appData.groupBet.votes={};
+  const prev=appData.groupBet.votes[currentUser.fbKey];
+  if(prev===matchId){appData.groupBet.votes[currentUser.fbKey]=null;delete appData.groupBet.votes[currentUser.fbKey];}
+  else{appData.groupBet.votes[currentUser.fbKey]=matchId;}
+  saveToFirebase();
+  renderGroupBet();
+  showToast(prev===matchId?'הסרת את הצבעתך':'✅ הצבעת!');
+}
+
+function confirmGroupBetWinner(e){
+  e.preventDefault();
+  if(!appData.groupBet||!appData.groupBet.votes)return;
+  const counts={};
+  Object.values(appData.groupBet.votes).forEach(v=>{if(v)counts[v]=(counts[v]||0)+1;});
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  if(!top){showToast('אין הצבעות');return;}
+  if(!appData.groupBet)appData.groupBet={};
+  appData.groupBet.selected=top[0];
+  saveToFirebase();
+  renderGroupBet();
+  showToast('🎉 המשחק המנצח נקבע!');
+}
 </script>
 </body>
 </html>

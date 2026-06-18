@@ -587,8 +587,70 @@ document.getElementById('profile-modal').addEventListener('click',e=>{if(e.targe
 function filterMatches(stage,btn){matchFilter=stage;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderMatches();}
 function renderMatches(){const list=document.getElementById('matches-list');if(!list)return;const filtered=matchFilter==='all'?M:M.filter(m=>m.stage===matchFilter);list.innerHTML=filtered.map(m=>{const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️';const scoreHtml=m.score?`<div class="match-score">${m.score[0]} – ${m.score[1]}</div>`:`<div class="match-score upcoming">${locked?'🔒':'vs'}</div>`;return`<div class="match-card"><div class="match-stage">${SL[m.stage]||m.stage}</div><div class="match-teams"><div class="match-team home">${hf} ${m.home}</div>${scoreHtml}<div class="match-team away">${m.away} ${af}</div></div><div class="match-meta"><span class="match-date">📅 ${fmtDate(m.kick)}</span>${locked?'<span class="locked-badge">🔒 נעול</span>':'<span class="open-badge">✅ פתוח</span>'}${m.venue?`<span style="font-size:.69rem;color:var(--muted)">📍 ${m.venue}</span>`:''}<span style="font-size:.69rem;color:#5b9bd5">📺 כאן 11 / ספורט 1</span></div></div>`;}).join('');}
 
-function renderBetsList(){const list=document.getElementById('bets-matches-list');if(!list||!currentUser)return;const userBets=(appData.bets&&appData.bets[currentUser.fbKey])||{};const SO={group:0,r32:1,r16:2,qf:3,sf:4,third:5,final:6};const sorted=[...M].sort((a,b)=>(SO[a.stage]||0)-(SO[b.stage]||0)||new Date(a.kick)-new Date(b.kick));list.innerHTML=sorted.map(m=>{const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️',bet=userBets[m.id];let rb='#333',bd='',bs='';if(bet){bs=`<div style="background:#111;border-radius:6px;padding:3px 9px;font-weight:900;color:var(--gold);font-size:.92rem;white-space:nowrap">${bet.home}–${bet.away}</div>`;if(m.score){const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D',ex=bet.home===m.score[0]&&bet.away===m.score[1];if(ex){bd='<span style="color:var(--green);font-weight:900;font-size:.82rem">✅+3</span>';rb='var(--green)';}else if(bw===rw){bd='<span style="color:var(--green);font-weight:900;font-size:.82rem">✅+1</span>';rb='#2a7a4a';}else{bd='<span style="color:var(--red);font-weight:900;font-size:.82rem">❌</span>';rb='var(--red)';}}else if(locked){bd='<span style="color:var(--muted);font-size:.8rem">⏳</span>';rb='#555';}else{bd='<span style="color:var(--green);font-size:.8rem">✏️</span>';rb='rgba(46,204,113,.4)';}}const ab=locked?`<div style="font-size:.68rem;color:var(--red);font-weight:700">🔒</div>`:`<button onclick="openBetModal('${m.id}')" style="background:${bet?'rgba(245,200,0,.15)':'rgba(192,0,10,.15)'};border:1px solid ${bet?'var(--gold)':'var(--red)'};color:${bet?'var(--gold)':'#ff6b6b'};font-family:inherit;font-size:.76rem;font-weight:900;padding:5px 9px;border-radius:8px;cursor:pointer;white-space:nowrap">${bet?'✏️ עדכן':'➕ הימר'}</button>`;const sd=m.score?`<span style="background:#111;border-radius:4px;padding:1px 6px;font-weight:900;color:var(--gold);font-size:.8rem;margin-right:3px">${m.score[0]}–${m.score[1]}</span>`:'';return`<div style="background:var(--card);border-radius:11px;padding:12px 14px;margin-bottom:7px;border:1.5px solid ${rb}"><div style="font-size:.67rem;color:var(--muted);font-weight:700;margin-bottom:5px">${SL[m.stage]||m.stage} · ${fmtDate(m.kick)}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div style="flex:1;min-width:0;font-size:.88rem;font-weight:700">${hf} ${m.home} <span style="color:var(--muted)">vs</span> ${m.away} ${af} ${sd}</div><div style="display:flex;align-items:center;gap:5px;flex-shrink:0">${bs}${bd}${ab}</div></div></div>`;}).join('');}
+function renderBetsList(){
+  const list=document.getElementById('bets-matches-list');
+  if(!list||!currentUser)return;
+  const userBets=(appData.bets&&appData.bets[currentUser.fbKey])||{};
+  const SO={group:0,r32:1,r16:2,qf:3,sf:4,third:5,final:6};
+  const sorted=[...M].sort((a,b)=>(SO[a.stage]||0)-(SO[b.stage]||0)||new Date(a.kick)-new Date(b.kick));
+  const now=new Date();
+  const played=sorted.filter(m=>m.score||(isLocked(m.kick)&&new Date(m.kick)<now));
+  const upcoming=sorted.filter(m=>!m.score&&new Date(m.kick)>=now);
+  const nextMatch=upcoming[0]||null;
 
+  function buildCard(m,isNext){
+    const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️',bet=userBets[m.id];
+    let rb='#333',bd='',bs='';
+    if(bet){
+      bs=`<div style="background:#111;border-radius:6px;padding:3px 9px;font-weight:900;color:var(--gold);font-size:${isNext?'1rem':'.92rem'};white-space:nowrap">${bet.home}–${bet.away}</div>`;
+      if(m.score){
+        const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D',ex=bet.home===m.score[0]&&bet.away===m.score[1];
+        if(ex){bd='<span style="color:var(--green);font-weight:900;font-size:.82rem">✅+3</span>';rb='var(--green)';}
+        else if(bw===rw){bd='<span style="color:var(--green);font-weight:900;font-size:.82rem">✅+1</span>';rb='#2a7a4a';}
+        else{bd='<span style="color:var(--red);font-weight:900;font-size:.82rem">❌</span>';rb='var(--red)';}
+      }else if(locked){bd='<span style="color:var(--muted);font-size:.8rem">⏳</span>';rb='#555';}
+      else{bd='<span style="color:var(--green);font-size:.8rem">✏️</span>';rb='rgba(46,204,113,.4)';}
+    }
+    const btnPad=isNext?'7px 14px':'5px 9px';
+    const btnFs=isNext?'.85rem':'.76rem';
+    const ab=locked
+      ?`<div style="font-size:.68rem;color:var(--red);font-weight:700">🔒</div>`
+      :`<button onclick="openBetModal('${m.id}')" style="background:${bet?'rgba(245,200,0,.15)':'rgba(192,0,10,.15)'};border:1px solid ${bet?'var(--gold)':'var(--red)'};color:${bet?'var(--gold)':'#ff6b6b'};font-family:inherit;font-size:${btnFs};font-weight:900;padding:${btnPad};border-radius:8px;cursor:pointer;white-space:nowrap">${bet?'✏️ עדכן':'➕ הימר'}</button>`;
+    const sd=m.score?`<span style="background:#111;border-radius:4px;padding:1px 6px;font-weight:900;color:var(--gold);font-size:.8rem;margin-right:3px">${m.score[0]}–${m.score[1]}</span>`:'';
+    const nextBadge=isNext?`<span style="background:var(--gold);color:#000;font-size:.64rem;font-weight:900;padding:2px 8px;border-radius:20px;margin-left:8px">⚡ הבא</span>`:'';
+    const bg=isNext?'var(--card2)':'var(--card)';
+    const br=isNext?'14px':'11px';
+    const pd=isNext?'16px 18px':'12px 14px';
+    const mb=isNext?'10px':'7px';
+    const brd=isNext?'2px solid var(--gold)':`1.5px solid ${rb}`;
+    const nameFs=isNext?'1.05rem':'.88rem';
+    const nameFw=isNext?'900':'700';
+    return `<div style="background:${bg};border-radius:${br};padding:${pd};margin-bottom:${mb};border:${brd}">
+      <div style="font-size:.67rem;color:var(--muted);font-weight:700;margin-bottom:${isNext?'8px':'5px'}">${nextBadge}${SL[m.stage]||m.stage} · ${fmtDate(m.kick)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <div style="flex:1;min-width:0;font-size:${nameFs};font-weight:${nameFw}">${hf} ${m.home} <span style="color:var(--muted)">vs</span> ${m.away} ${af} ${sd}</div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">${bs}${bd}${ab}</div>
+      </div>
+    </div>`;
+  }
+
+  let html='';
+
+  if(played.length>0){
+    const playedHtml=played.map(m=>buildCard(m,false)).join('');
+    html+=`<details style="margin-bottom:14px">
+      <summary style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between">
+        <span>⏮ משחקים שסיימו (${played.length})</span><span style="font-size:.75rem">▼</span>
+      </summary>
+      <div style="margin-top:8px">${playedHtml}</div>
+    </details>`;
+  }
+
+  if(nextMatch) html+=buildCard(nextMatch,true);
+  upcoming.slice(1).forEach(m=>{html+=buildCard(m,false);});
+
+  list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
+}
 function openBetModal(matchId){const m=M.find(x=>x.id===matchId);if(!m||isLocked(m.kick))return;activeBetMatchId=matchId;const hf=FLAGS[m.home]||'',af=FLAGS[m.away]||'';document.getElementById('modal-match-name').textContent=`${hf} ${m.home} – ${m.away} ${af}`;document.getElementById('modal-match-date').textContent=fmtDate(m.kick);document.getElementById('modal-home-label').textContent=m.home;document.getElementById('modal-away-label').textContent=m.away;const ex=((appData.bets||{})[currentUser.fbKey]||{})[matchId];document.getElementById('modal-home').value=ex?ex.home:'';document.getElementById('modal-away').value=ex?ex.away:'';document.getElementById('modal-ok').style.display='none';document.getElementById('bet-modal').style.display='flex';}
 function closeBetModal(){document.getElementById('bet-modal').style.display='none';activeBetMatchId=null;}
 document.getElementById('bet-modal').addEventListener('click',e=>{if(e.target===document.getElementById('bet-modal'))closeBetModal();});

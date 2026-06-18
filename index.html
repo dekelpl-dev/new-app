@@ -269,6 +269,18 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   </div>
 </div>
 
+<!-- BETS VIEWER POPUP -->
+<div id="bets-viewer-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.78);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeBetsViewer()">
+  <div style="background:#1a1a2e;border-radius:20px 20px 0 0;padding:22px 18px 36px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div id="bvp-title" style="font-size:1rem;font-weight:900"></div>
+      <button onclick="closeBetsViewer()" style="background:rgba(255,255,255,.1);border:none;color:#fff;font-size:1.1rem;width:30px;height:30px;border-radius:50%;cursor:pointer">✕</button>
+    </div>
+    <div id="bvp-date" style="font-size:.73rem;color:var(--muted);margin-bottom:16px"></div>
+    <div id="bvp-list"></div>
+  </div>
+</div>
+
 <!-- WHERE POPUP -->
 <div id="where-popup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeWherePopup()">
   <div style="background:#1a1a2e;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto">
@@ -611,9 +623,10 @@ function renderMatches(){
     const cardStyle=isNext
       ?`background:var(--card2);border:2px solid var(--gold);border-radius:16px;padding:18px 16px;margin-bottom:12px`
       :`background:var(--card);border:1px solid #333;border-radius:12px;padding:13px 14px;margin-bottom:8px`;
+    const clickable=locked?`onclick="openBetsViewer('${m.id}')" style="${cardStyle};cursor:pointer"`:`style="${cardStyle}"`;
     const teamFs=isNext?'1rem':'.88rem';
     const stageFs=isNext?'.72rem':'.67rem';
-    return `<div class="match-card" style="${cardStyle}">
+    return `<div class="match-card" ${clickable}>
       <div class="match-stage" style="font-size:${stageFs};margin-bottom:${isNext?'10px':'6px'}">${nextBadge}${SL[m.stage]||m.stage}</div>
       <div class="match-teams" style="${isNext?'gap:12px':''}">
         <div class="match-team home" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${hf} ${m.home}</div>
@@ -622,7 +635,7 @@ function renderMatches(){
       </div>
       <div class="match-meta">
         <span class="match-date">📅 ${fmtDate(m.kick)}</span>
-        ${locked?'<span class="locked-badge">🔒 נעול</span>':'<span class="open-badge">✅ פתוח</span>'}
+        ${locked?'<span class="locked-badge" style="cursor:pointer">👁 הימורים</span>':'<span class="open-badge">✅ פתוח</span>'}
         ${m.venue?`<span style="font-size:.69rem;color:var(--muted)">📍 ${m.venue}</span>`:''}
         <span style="font-size:.69rem;color:#5b9bd5">📺 כאן 11 / ספורט 1</span>
       </div>
@@ -922,6 +935,49 @@ function renderAdminResults(){const list=document.getElementById('admin-results-
 function adminDeleteScore(matchId){if(currentUser.username!=='dekel')return;const m=M.find(x=>x.id===matchId);if(!m)return;m.score=null;if(appData.matchScores)delete appData.matchScores[matchId];recalcAllScores();saveToFirebase();renderLeaderboard();renderMatches();renderAdminResults();populateAdminSelect();showToast('✅ נמחק');}
 
 const TEAMS=[{f:'🇧🇷',n:'ברזיל',c:72,s:['ויניציוס+רודריגו','ניסיון עולמי'],v:'מועדפת. אבל ברזיל תמיד מאכזבת.'},{f:'🇦🇷',n:'ארגנטינה',c:68,s:['אלוף 2022','מסי האחרון'],v:'מגנים על הכתר.'},{f:'🇫🇷',n:'צרפת',c:70,s:['אמבפה','סגל מטורף'],v:'הכי מוכשר.'},{f:'🇩🇪',n:'גרמניה',c:58,s:['ביתיים!','מוסיאלה'],v:'רעבים לנצח.'},{f:'🇪🇸',n:'ספרד',c:65,s:['יאמאל (17!)','טיקי-טאקה'],v:'המשחק הכי יפה.'},{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'אנגליה',c:60,s:['בלינגהאם','סאקה'],v:'הפעם?'},{f:'🇵🇹',n:'פורטוגל',c:55,s:['קוניאל','פליקס'],v:'דור חדש.'},{f:'🇲🇦',n:'מרוקו',c:50,s:['חצי גמר 2022','הגנה'],v:'סוס שחור.'}];
+// ===== Bets Viewer =====
+function openBetsViewer(matchId){
+  const m=M.find(x=>x.id===matchId);
+  if(!m)return;
+  const hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️';
+  document.getElementById('bvp-title').textContent=`${hf} ${m.home} – ${m.away} ${af}`;
+  document.getElementById('bvp-date').textContent=`📅 ${fmtDate(m.kick)}`;
+
+  const allBets=appData.bets||{};
+  const rows=Object.values(USERS).map(u=>{
+    const bet=(allBets[u.fbKey]||{})[matchId];
+    const hasScore=!!m.score;
+    let points='',bg='rgba(255,255,255,.04)',border='rgba(255,255,255,.08)';
+    if(bet&&hasScore){
+      const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D';
+      const rw=m.score[0]>m.score[1]?'H':m.score[0]<m.score[1]?'A':'D';
+      const ex=bet.home===m.score[0]&&bet.away===m.score[1];
+      if(ex){points='✅ +3';bg='rgba(46,204,113,.1)';border='rgba(46,204,113,.4)';}
+      else if(bw===rw){points='✅ +1';bg='rgba(46,204,113,.07)';border='rgba(46,204,113,.25)';}
+      else{points='❌';bg='rgba(192,0,10,.08)';border='rgba(192,0,10,.3)';}
+    }
+    return `<div style="background:${bg};border:1.5px solid ${border};border-radius:11px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="font-size:.95rem;font-weight:900">${u.display}</div>
+      ${bet
+        ?`<div style="display:flex;align-items:center;gap:10px">
+            <div style="background:#111;border-radius:7px;padding:4px 12px;font-weight:900;font-size:1rem;color:var(--gold)">${bet.home} – ${bet.away}</div>
+            ${points?`<div style="font-size:.85rem;font-weight:900">${points}</div>`:''}
+          </div>`
+        :`<div style="font-size:.8rem;color:var(--muted)">לא הימר</div>`
+      }
+    </div>`;
+  }).join('');
+
+  const scoreBlock=m.score
+    ?`<div style="text-align:center;background:rgba(245,200,0,.1);border:1px solid rgba(245,200,0,.3);border-radius:10px;padding:10px;margin-bottom:16px;font-size:1.2rem;font-weight:900;color:var(--gold)">תוצאה: ${m.score[0]} – ${m.score[1]}</div>`:'';
+
+  document.getElementById('bvp-list').innerHTML=scoreBlock+rows;
+  document.getElementById('bets-viewer-popup').style.display='flex';
+}
+function closeBetsViewer(){
+  document.getElementById('bets-viewer-popup').style.display='none';
+}
+
 // ===== איפה יושבים — popup =====
 const WHERE_OPTIONS = [
   {id:'murphys',emoji:'🍺',name:"מרפי'ס פולג — נתניה",desc:'פאב אירי, מסכים מכל עבר, שידורים עם סאונד',addr:'גיבורי ישראל 17, יכין סנטר, א.ת. פולג, נתניה',maps:'https://maps.app.goo.gl/Murphys'},

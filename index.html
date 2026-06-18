@@ -585,8 +585,62 @@ function closeProfile(){document.getElementById('profile-modal').style.display='
 document.getElementById('profile-modal').addEventListener('click',e=>{if(e.target===document.getElementById('profile-modal'))closeProfile();});
 
 function filterMatches(stage,btn){matchFilter=stage;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderMatches();}
-function renderMatches(){const list=document.getElementById('matches-list');if(!list)return;const filtered=matchFilter==='all'?M:M.filter(m=>m.stage===matchFilter);list.innerHTML=filtered.map(m=>{const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️';const scoreHtml=m.score?`<div class="match-score">${m.score[0]} – ${m.score[1]}</div>`:`<div class="match-score upcoming">${locked?'🔒':'vs'}</div>`;return`<div class="match-card"><div class="match-stage">${SL[m.stage]||m.stage}</div><div class="match-teams"><div class="match-team home">${hf} ${m.home}</div>${scoreHtml}<div class="match-team away">${m.away} ${af}</div></div><div class="match-meta"><span class="match-date">📅 ${fmtDate(m.kick)}</span>${locked?'<span class="locked-badge">🔒 נעול</span>':'<span class="open-badge">✅ פתוח</span>'}${m.venue?`<span style="font-size:.69rem;color:var(--muted)">📍 ${m.venue}</span>`:''}<span style="font-size:.69rem;color:#5b9bd5">📺 כאן 11 / ספורט 1</span></div></div>`;}).join('');}
+function renderMatches(){
+  const list=document.getElementById('matches-list');
+  if(!list)return;
+  const now=new Date();
+  const filtered=matchFilter==='all'?M:M.filter(m=>m.stage===matchFilter);
+  const SO={group:0,r32:1,r16:2,qf:3,sf:4,third:5,final:6};
+  const sorted=[...filtered].sort((a,b)=>(SO[a.stage]||0)-(SO[b.stage]||0)||new Date(a.kick)-new Date(b.kick));
 
+  const played=sorted.filter(m=>m.score||(isLocked(m.kick)&&new Date(m.kick)<now));
+  const upcoming=sorted.filter(m=>!m.score&&new Date(m.kick)>=now);
+  const nextMatch=upcoming[0]||null;
+
+  function buildMatchCard(m,isNext){
+    const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️';
+    const scoreHtml=m.score
+      ?`<div class="match-score" style="${isNext?'font-size:1.4rem;padding:6px 14px':''}">${m.score[0]} – ${m.score[1]}</div>`
+      :`<div class="match-score upcoming" style="${isNext?'font-size:1rem':''}">${locked?'🔒':'vs'}</div>`;
+    const nextBadge=isNext?`<span style="background:var(--gold);color:#000;font-size:.64rem;font-weight:900;padding:2px 8px;border-radius:20px;margin-right:8px">⚡ הבא</span>`:'';
+    const cardStyle=isNext
+      ?`background:var(--card2);border:2px solid var(--gold);border-radius:16px;padding:18px 16px;margin-bottom:12px`
+      :`background:var(--card);border:1px solid #333;border-radius:12px;padding:13px 14px;margin-bottom:8px`;
+    const teamFs=isNext?'1rem':'.88rem';
+    const stageFs=isNext?'.72rem':'.67rem';
+    return `<div class="match-card" style="${cardStyle}">
+      <div class="match-stage" style="font-size:${stageFs};margin-bottom:${isNext?'10px':'6px'}">${nextBadge}${SL[m.stage]||m.stage}</div>
+      <div class="match-teams" style="${isNext?'gap:12px':''}">
+        <div class="match-team home" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${hf} ${m.home}</div>
+        ${scoreHtml}
+        <div class="match-team away" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${m.away} ${af}</div>
+      </div>
+      <div class="match-meta">
+        <span class="match-date">📅 ${fmtDate(m.kick)}</span>
+        ${locked?'<span class="locked-badge">🔒 נעול</span>':'<span class="open-badge">✅ פתוח</span>'}
+        ${m.venue?`<span style="font-size:.69rem;color:var(--muted)">📍 ${m.venue}</span>`:''}
+        <span style="font-size:.69rem;color:#5b9bd5">📺 כאן 11 / ספורט 1</span>
+      </div>
+    </div>`;
+  }
+
+  let html='';
+
+  if(played.length>0){
+    const playedHtml=played.map(m=>buildMatchCard(m,false)).join('');
+    html+=`<details style="margin-bottom:14px">
+      <summary style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between">
+        <span>⏮ משחקים שסיימו (${played.length})</span><span style="font-size:.75rem">▼</span>
+      </summary>
+      <div style="margin-top:8px">${playedHtml}</div>
+    </details>`;
+  }
+
+  if(nextMatch) html+=buildMatchCard(nextMatch,true);
+  upcoming.slice(1).forEach(m=>{html+=buildMatchCard(m,false);});
+
+  list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
+}
 function renderBetsList(){
   const list=document.getElementById('bets-matches-list');
   if(!list||!currentUser)return;

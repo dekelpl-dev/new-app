@@ -894,7 +894,7 @@ function saveUsers(){
   setTimeout(()=>ok.style.display='none',2000);
 }
 
-function populateAdminSelect(){const sel=document.getElementById('admin-match');if(!sel)return;sel.innerHTML='<option value="">— בחר —</option>';const now=new Date();M.filter(m=>!m.score&&new Date(m.kick)>=now).forEach(m=>{const opt=document.createElement('option');opt.value=m.id;opt.textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''} | ${fmtShort(m.kick)}`;sel.appendChild(opt);});}
+function populateAdminSelect(){const sel=document.getElementById('admin-match');if(!sel)return;sel.innerHTML='<option value="">— בחר —</option>';M.filter(m=>!m.score).forEach(m=>{const opt=document.createElement('option');opt.value=m.id;opt.textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''} | ${fmtShort(m.kick)}`;sel.appendChild(opt);});}
 function onAdminMatchSelect(){const matchId=document.getElementById('admin-match').value,row=document.getElementById('admin-score-row');if(!matchId){row.style.display='none';return;}const m=M.find(x=>x.id===matchId);if(!m)return;row.style.display='block';document.getElementById('admin-match-label').textContent=`${FLAGS[m.home]||''} ${m.home} – ${m.away} ${FLAGS[m.away]||''}`;document.getElementById('admin-home-label').textContent=m.home;document.getElementById('admin-away-label').textContent=m.away;document.getElementById('admin-home').value=m.score?m.score[0]:'';document.getElementById('admin-away').value=m.score?m.score[1]:'';}
 function recalcAllScores(){
   if(!appData.bets)appData.bets={};

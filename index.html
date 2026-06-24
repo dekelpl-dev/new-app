@@ -162,6 +162,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
     <nav>
       <button class="active" onclick="showPage('leaderboard',this)">🏆 טבלה</button>
       <button onclick="showPage('matches',this)">📅 משחקים</button>
+      <button onclick="showPage('groups',this)">🏠 מצב הבתים</button>
       <button onclick="showPage('bets',this)">🎯 הימורים</button>
       <button onclick="showPage('special',this)">🌟 מיוחדים</button>
       <button onclick="showPage('groupbet',this)">🍿 מתי יושבים</button>
@@ -196,6 +197,15 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
       <button class="filter-btn" onclick="filterMatches('final',this)">גמר 🏆</button>
     </div>
     <div id="matches-list"></div>
+  </div>
+</div>
+
+<!-- GROUPS -->
+<div class="page" id="page-groups" style="position:relative">
+  <div class="content" style="position:relative;z-index:1">
+    <div class="section-title">🏠 מצב הבתים</div>
+    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">הטבלאות מתעדכנות אוטומטית לפי תוצאות המשחקים</div>
+    <div id="groups-list"></div>
   </div>
 </div>
 
@@ -571,7 +581,7 @@ function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim
   loadScoresIntoM();
   document.getElementById('loadingOverlay').classList.add('hidden');
   fbReady=true;
-  renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();
+  renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();renderGroups();
   if(document.getElementById('page-admin').classList.contains('active')){populateAdminSelect();renderAdminResults();}
   // אם מסך כניסה פתוח וטעינה הסתיימה — אפשר להתחבר
   if(document.getElementById('login-screen').style.display==='flex'){
@@ -582,7 +592,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='groupbet')renderGroupBet();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='groupbet')renderGroupBet();if(name==='groups')renderGroups();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -653,7 +663,7 @@ function renderMatches(){
   let html='';
 
   if(played.length>0){
-    const playedHtml=played.map(m=>buildMatchCard(m,false)).join('');
+    const playedHtml=[...played].reverse().map(m=>buildMatchCard(m,false)).join('');
     html+=`<details style="margin-bottom:14px">
       <summary style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between">
         <span>⏮ משחקים שסיימו (${played.length})</span><span style="font-size:.75rem">▼</span>
@@ -666,6 +676,67 @@ function renderMatches(){
   upcoming.slice(1).forEach(m=>{html+=buildMatchCard(m,false);});
 
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
+}
+function renderGroups(){
+  const list=document.getElementById('groups-list');
+  if(!list)return;
+  const gm=M.filter(m=>m.stage==='group');
+  const adj={},order=[];
+  gm.forEach(m=>{
+    [m.home,m.away].forEach(t=>{if(!adj[t]){adj[t]=new Set();order.push(t);}});
+    adj[m.home].add(m.away);adj[m.away].add(m.home);
+  });
+  const seen=new Set(),groups=[];
+  order.forEach(t=>{
+    if(seen.has(t))return;
+    const stack=[t],comp=[];seen.add(t);
+    while(stack.length){const x=stack.pop();comp.push(x);adj[x].forEach(y=>{if(!seen.has(y)){seen.add(y);stack.push(y);}});}
+    groups.push(comp);
+  });
+  let html='';
+  groups.forEach((teams,gi)=>{
+    const stats={};
+    teams.forEach(t=>stats[t]={t,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0});
+    gm.forEach(m=>{
+      if(!m.score||teams.indexOf(m.home)<0)return;
+      const hs=+m.score[0],as=+m.score[1],H=stats[m.home],A=stats[m.away];
+      if(!H||!A)return;
+      H.p++;A.p++;H.gf+=hs;H.ga+=as;A.gf+=as;A.ga+=hs;
+      if(hs>as){H.w++;A.l++;H.pts+=3;}
+      else if(hs<as){A.w++;H.l++;A.pts+=3;}
+      else{H.d++;A.d++;H.pts++;A.pts++;}
+    });
+    const rows=teams.map(t=>stats[t]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.t.localeCompare(b.t,'he'));
+    const letter=String.fromCharCode(65+gi);
+    html+=`<div style="background:var(--card);border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:12px">
+      <div style="font-weight:900;color:var(--gold);margin-bottom:8px;font-size:.95rem">בית ${letter}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead><tr style="color:var(--muted);font-size:.66rem">
+          <th style="text-align:right;padding:4px 2px">#</th>
+          <th style="text-align:right;padding:4px 6px">קבוצה</th>
+          <th style="padding:4px 3px">מש'</th>
+          <th style="padding:4px 3px">נצ'</th>
+          <th style="padding:4px 3px">תי'</th>
+          <th style="padding:4px 3px">הפ'</th>
+          <th style="padding:4px 3px">הפרש</th>
+          <th style="padding:4px 3px;color:var(--gold)">נק'</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map((r,i)=>{const gd=r.gf-r.ga;const qual=i<2;return `<tr style="border-top:1px solid #2a2a2a;${qual?'background:rgba(245,200,0,.06)':''}">
+          <td style="text-align:right;padding:5px 2px;color:var(--muted)">${i+1}</td>
+          <td style="text-align:right;padding:5px 6px;font-weight:700">${FLAGS[r.t]||'🏳️'} ${r.t}</td>
+          <td style="text-align:center;padding:5px 3px">${r.p}</td>
+          <td style="text-align:center;padding:5px 3px">${r.w}</td>
+          <td style="text-align:center;padding:5px 3px">${r.d}</td>
+          <td style="text-align:center;padding:5px 3px">${r.l}</td>
+          <td style="text-align:center;padding:5px 3px">${gd>0?'+':''}${gd}</td>
+          <td style="text-align:center;padding:5px 3px;font-weight:900;color:var(--gold)">${r.pts}</td>
+        </tr>`;}).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין נתונים</div>';
 }
 function renderBetsList(){
   const list=document.getElementById('bets-matches-list');

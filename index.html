@@ -394,6 +394,21 @@ let currentUser=null,appData={scores:{},bets:{},matchScores:{},specialBets:{},us
 
 const FLAGS={'ברזיל':'🇧🇷','ארגנטינה':'🇦🇷','צרפת':'🇫🇷','גרמניה':'🇩🇪','ספרד':'🇪🇸','אנגליה':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','פורטוגל':'🇵🇹','הולנד':'🇳🇱','בלגיה':'🇧🇪','יפן':'🇯🇵','מרוקו':'🇲🇦','אורוגוואי':'🇺🇾','קרואטיה':'🇭🇷','מקסיקו':'🇲🇽','ארה"ב':'🇺🇸','קנדה':'🇨🇦','סנגל':'🇸🇳','דרום אפריקה':'🇿🇦','דרום קוריאה':'🇰🇷',"צ'כיה":'🇨🇿','בוסניה והרצגובינה':'🇧🇦','פראגוואי':'🇵🇾','האיטי':'🇭🇹','סקוטלנד':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','אוסטרליה':'🇦🇺','טורקיה':'🇹🇷','קטאר':'🇶🇦','שווייץ':'🇨🇭','חוף השנהב':'🇨🇮','אקוודור':'🇪🇨','קוראסאו':'🇨🇼','טוניסיה':'🇹🇳','שבדיה':'🇸🇪','ערב הסעודית':'🇸🇦','כף ורדה':'🇨🇻','איראן':'🇮🇷','ניו זילנד':'🇳🇿','מצרים':'🇪🇬','נורבגיה':'🇳🇴','עיראק':'🇮🇶',"אלג'יריה":'🇩🇿','אוסטריה':'🇦🇹','ירדן':'🇯🇴','גאנה':'🇬🇭','פנמה':'🇵🇦','קונגו הדמוקרטית':'🇨🇩','אוזבקיסטן':'🇺🇿','קולומביה':'🇨🇴','TBD':'❓'};
 const SL={group:'שלב הבתים',r32:'סיבוב 32',r16:'שמינית גמר',qf:'רבע גמר',sf:'חצי גמר',third:'מקום 3',final:'גמר 🏆'};
+// מספור בתים רשמי של מונדיאל 2026 (בית 1=A ... בית 12=L) — לפי ההגרלה הרשמית
+const GROUP_NUM={
+ 'מקסיקו':1,"צ'כיה":1,'דרום אפריקה':1,'דרום קוריאה':1,
+ 'קנדה':2,'שווייץ':2,'קטאר':2,'בוסניה והרצגובינה':2,
+ 'ברזיל':3,'האיטי':3,'מרוקו':3,'סקוטלנד':3,
+ 'אוסטרליה':4,'פראגוואי':4,'טורקיה':4,'ארה"ב':4,
+ 'קוראסאו':5,'אקוודור':5,'גרמניה':5,'חוף השנהב':5,
+ 'יפן':6,'הולנד':6,'שבדיה':6,'טוניסיה':6,
+ 'בלגיה':7,'מצרים':7,'איראן':7,'ניו זילנד':7,
+ 'כף ורדה':8,'ערב הסעודית':8,'ספרד':8,'אורוגוואי':8,
+ 'צרפת':9,'עיראק':9,'נורבגיה':9,'סנגל':9,
+ "אלג'יריה":10,'ארגנטינה':10,'אוסטריה':10,'ירדן':10,
+ 'קולומביה':11,'קונגו הדמוקרטית':11,'פורטוגל':11,'אוזבקיסטן':11,
+ 'קרואטיה':12,'אנגליה':12,'גאנה':12,'פנמה':12
+};
 
 const M=[
 {id:'m01',stage:'group',home:'מקסיקו',away:'דרום אפריקה',kick:'2026-06-11T22:00:00',venue:'מקסיקו סיטי',score:null},
@@ -661,24 +676,14 @@ function renderGroups(){
   const list=document.getElementById('groups-list');
   if(!list)return;
   const gm=M.filter(m=>m.stage==='group');
-  const adj={},order=[];
-  gm.forEach(m=>{
-    [m.home,m.away].forEach(t=>{if(!adj[t]){adj[t]=new Set();order.push(t);}});
-    adj[m.home].add(m.away);adj[m.away].add(m.home);
-  });
-  const seen=new Set(),groups=[];
-  order.forEach(t=>{
-    if(seen.has(t))return;
-    const stack=[t],comp=[];seen.add(t);
-    while(stack.length){const x=stack.pop();comp.push(x);adj[x].forEach(y=>{if(!seen.has(y)){seen.add(y);stack.push(y);}});}
-    groups.push(comp);
-  });
   let html='';
-  groups.forEach((teams,gi)=>{
+  for(let gn=1;gn<=12;gn++){
+    const teams=[...new Set(gm.filter(m=>GROUP_NUM[m.home]===gn).flatMap(m=>[m.home,m.away]).filter(t=>GROUP_NUM[t]===gn))];
+    if(teams.length<2)continue;
     const stats={};
     teams.forEach(t=>stats[t]={t,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0});
     gm.forEach(m=>{
-      if(!m.score||teams.indexOf(m.home)<0)return;
+      if(!m.score||GROUP_NUM[m.home]!==gn||GROUP_NUM[m.away]!==gn)return;
       const hs=+m.score[0],as=+m.score[1],H=stats[m.home],A=stats[m.away];
       if(!H||!A)return;
       H.p++;A.p++;H.gf+=hs;H.ga+=as;A.gf+=as;A.ga+=hs;
@@ -687,7 +692,7 @@ function renderGroups(){
       else{H.d++;A.d++;H.pts++;A.pts++;}
     });
     const rows=teams.map(t=>stats[t]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.t.localeCompare(b.t,'he'));
-    const letter=String.fromCharCode(65+gi);
+    const letter=String.fromCharCode(64+gn);
     html+=`<div style="background:var(--card);border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:12px">
       <div style="font-weight:900;color:var(--gold);margin-bottom:8px;font-size:.95rem">בית ${letter}</div>
       <table style="width:100%;border-collapse:collapse;font-size:.8rem">
@@ -715,26 +720,23 @@ function renderGroups(){
         </tbody>
       </table>
     </div>`;
-  });
+  }
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין נתונים</div>';
 }
 function knockoutResolveMap(){
   const gm=M.filter(m=>m.stage==='group');
-  const adj={},order=[];
-  gm.forEach(m=>{[m.home,m.away].forEach(t=>{if(!adj[t]){adj[t]=new Set();order.push(t);}});adj[m.home].add(m.away);adj[m.away].add(m.home);});
-  const seen=new Set(),groups=[];
-  order.forEach(t=>{if(seen.has(t))return;const st=[t],c=[];seen.add(t);while(st.length){const x=st.pop();c.push(x);adj[x].forEach(y=>{if(!seen.has(y)){seen.add(y);st.push(y);}});}groups.push(c);});
   const map={};
-  groups.forEach((teams,gi)=>{
-    const gmatches=gm.filter(m=>teams.indexOf(m.home)>=0);
-    if(!gmatches.length||!gmatches.every(m=>m.score))return; // group not finished yet
+  for(let n=1;n<=12;n++){
+    const teams=[...new Set(gm.filter(m=>GROUP_NUM[m.home]===n).flatMap(m=>[m.home,m.away]).filter(t=>GROUP_NUM[t]===n))];
+    if(teams.length<2)continue;
+    const gmatches=gm.filter(m=>GROUP_NUM[m.home]===n&&GROUP_NUM[m.away]===n);
+    if(!gmatches.length||!gmatches.every(m=>m.score))continue; // group not finished yet
     const stats={};teams.forEach(t=>stats[t]={t,gf:0,ga:0,pts:0});
     gmatches.forEach(m=>{const hs=+m.score[0],as=+m.score[1],H=stats[m.home],A=stats[m.away];H.gf+=hs;H.ga+=as;A.gf+=as;A.ga+=hs;if(hs>as)H.pts+=3;else if(hs<as)A.pts+=3;else{H.pts++;A.pts++;}});
     const ranked=teams.map(t=>stats[t]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.t.localeCompare(b.t,'he'));
-    const n=gi+1;
     if(ranked[0])map['מנצחת בית '+n]=ranked[0].t;
     if(ranked[1])map['סגנית בית '+n]=ranked[1].t;
-  });
+  }
   return map;
 }
 function renderBetsList(){

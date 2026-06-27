@@ -718,10 +718,30 @@ function renderGroups(){
   });
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין נתונים</div>';
 }
+function knockoutResolveMap(){
+  const gm=M.filter(m=>m.stage==='group');
+  const adj={},order=[];
+  gm.forEach(m=>{[m.home,m.away].forEach(t=>{if(!adj[t]){adj[t]=new Set();order.push(t);}});adj[m.home].add(m.away);adj[m.away].add(m.home);});
+  const seen=new Set(),groups=[];
+  order.forEach(t=>{if(seen.has(t))return;const st=[t],c=[];seen.add(t);while(st.length){const x=st.pop();c.push(x);adj[x].forEach(y=>{if(!seen.has(y)){seen.add(y);st.push(y);}});}groups.push(c);});
+  const map={};
+  groups.forEach((teams,gi)=>{
+    const gmatches=gm.filter(m=>teams.indexOf(m.home)>=0);
+    if(!gmatches.length||!gmatches.every(m=>m.score))return; // group not finished yet
+    const stats={};teams.forEach(t=>stats[t]={t,gf:0,ga:0,pts:0});
+    gmatches.forEach(m=>{const hs=+m.score[0],as=+m.score[1],H=stats[m.home],A=stats[m.away];H.gf+=hs;H.ga+=as;A.gf+=as;A.ga+=hs;if(hs>as)H.pts+=3;else if(hs<as)A.pts+=3;else{H.pts++;A.pts++;}});
+    const ranked=teams.map(t=>stats[t]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.t.localeCompare(b.t,'he'));
+    const n=gi+1;
+    if(ranked[0])map['מנצחת בית '+n]=ranked[0].t;
+    if(ranked[1])map['סגנית בית '+n]=ranked[1].t;
+  });
+  return map;
+}
 function renderBetsList(){
   const list=document.getElementById('bets-matches-list');
   if(!list||!currentUser)return;
   const userBets=(appData.bets&&appData.bets[currentUser.fbKey])||{};
+  const KRES=knockoutResolveMap();
   const SO={group:0,r32:1,r16:2,qf:3,sf:4,third:5,final:6};
   const sorted=[...M].sort((a,b)=>(SO[a.stage]||0)-(SO[b.stage]||0)||new Date(a.kick)-new Date(b.kick));
   const now=new Date();
@@ -730,7 +750,7 @@ function renderBetsList(){
   const nextMatch=upcoming[0]||null;
 
   function buildCard(m,isNext){
-    const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️',bet=userBets[m.id];
+    const hn=KRES[m.home]||m.home,an=KRES[m.away]||m.away,locked=isLocked(m.kick),hf=FLAGS[hn]||'🏳️',af=FLAGS[an]||'🏳️',bet=userBets[m.id];
     let rb='#333',bd='',bs='';
     if(bet){
       bs=`<div style="background:#111;border-radius:6px;padding:3px 9px;font-weight:900;color:var(--gold);font-size:${isNext?'1rem':'.92rem'};white-space:nowrap">${bet.home}–${bet.away}</div>`;
@@ -759,7 +779,7 @@ function renderBetsList(){
     return `<div style="background:${bg};border-radius:${br};padding:${pd};margin-bottom:${mb};border:${brd}">
       <div style="font-size:.67rem;color:var(--muted);font-weight:700;margin-bottom:${isNext?'8px':'5px'}">${nextBadge}${SL[m.stage]||m.stage} · ${fmtDate(m.kick)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <div style="flex:1;min-width:0;font-size:${nameFs};font-weight:${nameFw}">${hf} ${m.home} <span style="color:var(--muted)">vs</span> ${m.away} ${af} ${sd}</div>
+        <div style="flex:1;min-width:0;font-size:${nameFs};font-weight:${nameFw}">${hf} ${hn} <span style="color:var(--muted)">vs</span> ${an} ${af} ${sd}</div>
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">${bs}${bd}${ab}</div>
       </div>
     </div>`;

@@ -658,7 +658,7 @@ function renderMatches(){
   let html='';
 
   if(played.length>0){
-    const playedHtml=[...played].reverse().map(m=>buildMatchCard(m,false)).join('');
+    const playedHtml=[...played].sort((a,b)=>new Date(b.kick)-new Date(a.kick)).map(m=>buildMatchCard(m,false)).join('');
     html+=`<details style="margin-bottom:14px">
       <summary style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.82rem;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between">
         <span>⏮ משחקים שסיימו (${played.length})</span><span style="font-size:.75rem">▼</span>

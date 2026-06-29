@@ -619,6 +619,7 @@ function renderMatches(){
   const list=document.getElementById('matches-list');
   if(!list)return;
   const now=new Date();
+  const KR=knockoutResolveMap();
   const filtered=matchFilter==='all'?M:M.filter(m=>m.stage===matchFilter);
   const SO={group:0,r32:1,r16:2,qf:3,sf:4,third:5,final:6};
   const sorted=[...filtered].sort((a,b)=>(SO[a.stage]||0)-(SO[b.stage]||0)||new Date(a.kick)-new Date(b.kick));
@@ -628,7 +629,7 @@ function renderMatches(){
   const nextMatch=upcoming[0]||null;
 
   function buildMatchCard(m,isNext){
-    const locked=isLocked(m.kick),hf=FLAGS[m.home]||'🏳️',af=FLAGS[m.away]||'🏳️';
+    const hn=KR[m.home]||m.home,an=KR[m.away]||m.away,locked=isLocked(m.kick),hf=FLAGS[hn]||'🏳️',af=FLAGS[an]||'🏳️';
     const scoreHtml=m.score
       ?`<div class="match-score" style="${isNext?'font-size:1.4rem;padding:6px 14px':''}">${m.score[0]} – ${m.score[1]}</div>`
       :`<div class="match-score upcoming" style="${isNext?'font-size:1rem':''}">${locked?'🔒':'vs'}</div>`;
@@ -642,9 +643,9 @@ function renderMatches(){
     return `<div class="match-card" ${clickable}>
       <div class="match-stage" style="font-size:${stageFs};margin-bottom:${isNext?'10px':'6px'}">${nextBadge}${SL[m.stage]||m.stage}</div>
       <div class="match-teams" style="${isNext?'gap:12px':''}">
-        <div class="match-team home" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${hf} ${m.home}</div>
+        <div class="match-team home" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${hf} ${hn}</div>
         ${scoreHtml}
-        <div class="match-team away" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${m.away} ${af}</div>
+        <div class="match-team away" style="font-size:${teamFs};font-weight:${isNext?'900':'700'}">${an} ${af}</div>
       </div>
       <div class="match-meta">
         <span class="match-date">📅 ${fmtDate(m.kick)}</span>

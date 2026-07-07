@@ -122,6 +122,26 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 .team-card{background:var(--card);border-radius:14px;padding:15px;border:1.5px solid #333;}
 .chance-bar-bg{height:5px;background:#333;border-radius:3px;margin:4px 0 10px;}
 .chance-bar{height:5px;background:var(--gold);border-radius:3px;}
+.bracket-scroll{overflow-x:auto;padding-bottom:6px;}
+.bracket{display:flex;align-items:center;justify-content:center;gap:0;min-width:1000px;background:radial-gradient(ellipse at center,#20202e,#0c0c12);border-radius:16px;padding:26px 10px;}
+.bracket-side{display:flex;gap:16px;}
+.bracket-side.right{flex-direction:row-reverse;}
+.bracket-round{display:flex;flex-direction:column;justify-content:space-around;gap:14px;}
+.bracket-pair{display:flex;flex-direction:column;justify-content:space-around;gap:10px;position:relative;padding:0 14px;}
+.r32-round .bracket-pair{gap:6px;}
+.bracket-side:not(.right) .bracket-pair::after{content:'';position:absolute;top:22%;bottom:22%;right:0;width:10px;border-top:2px solid #555;border-bottom:2px solid #555;border-right:2px solid #555;border-radius:0 4px 4px 0;}
+.bracket-side.right .bracket-pair::after{content:'';position:absolute;top:22%;bottom:22%;left:0;width:10px;border-top:2px solid #555;border-bottom:2px solid #555;border-left:2px solid #555;border-radius:4px 0 0 4px;}
+.sf-round .bracket-pair::after{display:none;}
+.bracket-match{background:#fff;color:#161616;border-radius:7px;overflow:hidden;width:132px;font-size:.68rem;box-shadow:0 2px 6px rgba(0,0,0,.45);flex-shrink:0;}
+.bracket-team{display:flex;align-items:center;gap:4px;padding:5px 6px;font-weight:700;border-bottom:1px solid #e2e2e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bracket-team:last-child{border-bottom:none;}
+.bracket-team.winner{background:rgba(46,204,113,.22);}
+.bracket-team .flag{font-size:.9rem;}
+.bracket-team .tbd{color:#aaa;font-weight:400;}
+.bracket-center{display:flex;flex-direction:column;align-items:center;gap:8px;margin:0 18px;}
+.bracket-trophy{font-size:2.4rem;line-height:1;}
+.bracket-final-label{font-size:.68rem;color:var(--gold);font-weight:900;text-align:center;white-space:nowrap;}
+@media(max-width:600px){.bracket-match{width:112px;font-size:.62rem;}.bracket-round{gap:10px;}.bracket-side{gap:10px;}}
 #profile-modal{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;}
 .profile-box{background:var(--card);border-radius:16px;padding:22px;width:92%;max-width:480px;max-height:85vh;overflow-y:auto;border:1.5px solid rgba(245,200,0,.3);}
 #syncIndicator{position:fixed;bottom:20px;left:20px;background:var(--green);color:#000;font-weight:900;padding:7px 14px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .3s;z-index:999;pointer-events:none;}
@@ -162,7 +182,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
     <nav>
       <button class="active" onclick="showPage('leaderboard',this)">🏆 טבלה</button>
       <button onclick="showPage('matches',this)">📅 משחקים</button>
-      <button onclick="showPage('groups',this)">🏠 מצב הבתים</button>
+      <button onclick="showPage('bracket',this)">🌳 עולות שלב</button>
       <button onclick="showPage('bets',this)">🎯 הימורים</button>
       <button onclick="showPage('special',this)">🌟 מיוחדים</button>
       <button onclick="showPage('explain',this)">📖 הסבר</button>
@@ -200,11 +220,11 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 </div>
 
 <!-- GROUPS -->
-<div class="page" id="page-groups" style="position:relative">
+<div class="page" id="page-bracket" style="position:relative">
   <div class="content" style="position:relative;z-index:1">
-    <div class="section-title">🏠 מצב הבתים</div>
-    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">הטבלאות מתעדכנות אוטומטית לפי תוצאות המשחקים</div>
-    <div id="groups-list"></div>
+    <div class="section-title">🌳 עולות שלב - בדרך לגמר</div>
+    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">התקדמות הנבחרות משמינית הגמר ועד לגמר</div>
+    <div class="bracket-scroll"><div id="bracket-list"></div></div>
   </div>
 </div>
 
@@ -576,7 +596,7 @@ function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim
   loadScoresIntoM();
   document.getElementById('loadingOverlay').classList.add('hidden');
   fbReady=true;
-  renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();renderGroups();
+  renderLeaderboard();renderMatches();renderBetsList();renderSpecialBets();renderAnalysis();renderBracket();
   if(document.getElementById('page-admin').classList.contains('active')){populateAdminSelect();renderAdminResults();}
   // אם מסך כניסה פתוח וטעינה הסתיימה — אפשר להתחבר
   if(document.getElementById('login-screen').style.display==='flex'){
@@ -587,7 +607,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='groups')renderGroups();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='bracket')renderBracket();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -673,56 +693,77 @@ function renderMatches(){
 
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
 }
-function renderGroups(){
-  const list=document.getElementById('groups-list');
+const BRACKET_TREE={
+  left:[
+    {r32:['r32a','r32d'],r16:'r16a'},
+    {r32:['r32c','r32f'],r16:'r16b'},
+    {r32:['r32l','r32o'],r16:'r16e'},
+    {r32:['r32j','r32i'],r16:'r16f'}
+  ],
+  right:[
+    {r32:['r32b','r32e'],r16:'r16c'},
+    {r32:['r32g','r32h'],r16:'r16d'},
+    {r32:['r32k','r32n'],r16:'r16g'},
+    {r32:['r32m','r32p'],r16:'r16h'}
+  ],
+  qfLeft:['qf1','qf2'],qfRight:['qf3','qf4'],
+  sfLeft:'sf1',sfRight:'sf2',
+  final:'fin'
+};
+function bracketTeamRow(matchId,KR){
+  const m=M.find(x=>x.id===matchId);
+  if(!m)return{home:'TBD',away:'TBD',hf:'',af:'',winner:null};
+  const hn=KR[m.home]||m.home,an=KR[m.away]||m.away;
+  const hf=hn==='TBD'?'':(FLAGS[hn]||'🏳️'),af=an==='TBD'?'':(FLAGS[an]||'🏳️');
+  let winner=null;
+  if(m.score){winner=m.score[0]>m.score[1]?'home':(m.score[1]>m.score[0]?'away':null);}
+  return{home:hn,away:an,hf,af,winner};
+}
+function bracketMatchHtml(matchId,KR){
+  const t=bracketTeamRow(matchId,KR);
+  const cls=(side)=>'bracket-team'+(t.winner===side?' winner':'');
+  return `<div class="bracket-match">
+    <div class="${cls('home')}">${t.home==='TBD'?'<span class="tbd">TBD</span>':`<span class="flag">${t.hf}</span> ${t.home}`}</div>
+    <div class="${cls('away')}">${t.away==='TBD'?'<span class="tbd">TBD</span>':`<span class="flag">${t.af}</span> ${t.away}`}</div>
+  </div>`;
+}
+function bracketHalfHtml(nodes,KR){
+  const r32Html=nodes.map(n=>`<div class="bracket-pair">${n.r32.map(id=>bracketMatchHtml(id,KR)).join('')}</div>`).join('');
+  const r16Pairs=[[nodes[0].r16,nodes[1].r16],[nodes[2].r16,nodes[3].r16]];
+  const r16Html=r16Pairs.map(pair=>`<div class="bracket-pair">${pair.map(id=>bracketMatchHtml(id,KR)).join('')}</div>`).join('');
+  return{r32Html,r16Html};
+}
+function renderBracket(){
+  const list=document.getElementById('bracket-list');
   if(!list)return;
-  const gm=M.filter(m=>m.stage==='group');
-  let html='';
-  for(let gn=1;gn<=12;gn++){
-    const teams=[...new Set(gm.filter(m=>GROUP_NUM[m.home]===gn).flatMap(m=>[m.home,m.away]).filter(t=>GROUP_NUM[t]===gn))];
-    if(teams.length<2)continue;
-    const stats={};
-    teams.forEach(t=>stats[t]={t,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0});
-    gm.forEach(m=>{
-      if(!m.score||GROUP_NUM[m.home]!==gn||GROUP_NUM[m.away]!==gn)return;
-      const hs=+m.score[0],as=+m.score[1],H=stats[m.home],A=stats[m.away];
-      if(!H||!A)return;
-      H.p++;A.p++;H.gf+=hs;H.ga+=as;A.gf+=as;A.ga+=hs;
-      if(hs>as){H.w++;A.l++;H.pts+=3;}
-      else if(hs<as){A.w++;H.l++;A.pts+=3;}
-      else{H.d++;A.d++;H.pts++;A.pts++;}
-    });
-    const rows=teams.map(t=>stats[t]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.t.localeCompare(b.t,'he'));
-    const letter=String.fromCharCode(64+gn);
-    html+=`<div style="background:var(--card);border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:12px">
-      <div style="font-weight:900;color:var(--gold);margin-bottom:8px;font-size:.95rem">בית ${letter}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
-        <thead><tr style="color:var(--muted);font-size:.66rem">
-          <th style="text-align:right;padding:4px 2px">#</th>
-          <th style="text-align:right;padding:4px 6px">קבוצה</th>
-          <th style="padding:4px 3px">מש'</th>
-          <th style="padding:4px 3px">נצ'</th>
-          <th style="padding:4px 3px">תי'</th>
-          <th style="padding:4px 3px">הפ'</th>
-          <th style="padding:4px 3px">הפרש</th>
-          <th style="padding:4px 3px;color:var(--gold)">נק'</th>
-        </tr></thead>
-        <tbody>
-        ${rows.map((r,i)=>{const gd=r.gf-r.ga;const qual=i<2;return `<tr style="border-top:1px solid #2a2a2a;${qual?'background:rgba(245,200,0,.06)':''}">
-          <td style="text-align:right;padding:5px 2px;color:var(--muted)">${i+1}</td>
-          <td style="text-align:right;padding:5px 6px;font-weight:700">${FLAGS[r.t]||'🏳️'} ${r.t}</td>
-          <td style="text-align:center;padding:5px 3px">${r.p}</td>
-          <td style="text-align:center;padding:5px 3px">${r.w}</td>
-          <td style="text-align:center;padding:5px 3px">${r.d}</td>
-          <td style="text-align:center;padding:5px 3px">${r.l}</td>
-          <td style="text-align:center;padding:5px 3px">${gd>0?'+':''}${gd}</td>
-          <td style="text-align:center;padding:5px 3px;font-weight:900;color:var(--gold)">${r.pts}</td>
-        </tr>`;}).join('')}
-        </tbody>
-      </table>
-    </div>`;
-  }
-  list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין נתונים</div>';
+  const KR=knockoutResolveMap();
+  const left=bracketHalfHtml(BRACKET_TREE.left,KR);
+  const right=bracketHalfHtml(BRACKET_TREE.right,KR);
+  const qfLeftHtml=`<div class="bracket-pair">${BRACKET_TREE.qfLeft.map(id=>bracketMatchHtml(id,KR)).join('')}</div>`;
+  const qfRightHtml=`<div class="bracket-pair">${BRACKET_TREE.qfRight.map(id=>bracketMatchHtml(id,KR)).join('')}</div>`;
+  const sfLeftHtml=bracketMatchHtml(BRACKET_TREE.sfLeft,KR);
+  const sfRightHtml=bracketMatchHtml(BRACKET_TREE.sfRight,KR);
+  const finalHtml=bracketMatchHtml(BRACKET_TREE.final,KR);
+  list.innerHTML=`<div class="bracket">
+    <div class="bracket-side">
+      <div class="bracket-round r32-round">${left.r32Html}</div>
+      <div class="bracket-round r16-round">${left.r16Html}</div>
+      <div class="bracket-round qf-round">${qfLeftHtml}</div>
+      <div class="bracket-round sf-round">${sfLeftHtml}</div>
+    </div>
+    <div class="bracket-center">
+      <div class="bracket-trophy">🏆</div>
+      <div class="bracket-final-label">גמר</div>
+      ${finalHtml}
+      <div class="bracket-final-label">19.7 · MetLife</div>
+    </div>
+    <div class="bracket-side right">
+      <div class="bracket-round r32-round">${right.r32Html}</div>
+      <div class="bracket-round r16-round">${right.r16Html}</div>
+      <div class="bracket-round qf-round">${qfRightHtml}</div>
+      <div class="bracket-round sf-round">${sfRightHtml}</div>
+    </div>
+  </div>`;
 }
 function knockoutResolveMap(){
   const gm=M.filter(m=>m.stage==='group');

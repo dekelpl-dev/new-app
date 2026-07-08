@@ -348,7 +348,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
     </div>
     <div style="background:var(--card);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid rgba(245,200,0,.3)">
       <div style="font-size:.98rem;font-weight:900;color:var(--gold);margin-bottom:12px">👤 ניהול משתמשים</div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">לשינוי סיסמה — ערוך כאן ולחץ שמור. אפשר גם ישירות ב-Firebase Console תחת <code style="background:#111;padding:2px 6px;border-radius:4px">haksishim/users</code></div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">לשינוי שם תצוגה או סיסמה — ערוך כאן ולחץ שמור. אפשר גם ישירות ב-Firebase Console תחת <code style="background:#111;padding:2px 6px;border-radius:4px">haksishim/users</code></div>
       <div id="user-management-list"></div>
       <button class="submit-btn" style="margin-top:12px" onclick="saveUsers()">💾 שמור שינויים</button>
       <div id="users-saved" style="display:none;color:var(--green);font-weight:900;margin-top:8px;font-size:.85rem">✅ נשמר!</div>
@@ -403,7 +403,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 // USERS — ברירת מחדל אם Firebase לא טען עדיין
 const DEFAULT_USERS={
   'dekel':{pass:'dekel2026',display:'דקל',fbKey:'dekel'},
-  'mendi':{pass:'mendi2026',display:'מנדי',fbKey:'mendi'},
+  'mendi':{pass:'mendi2026',display:'מנדי הקקה',fbKey:'mendi'},
   'yoni':{pass:'Yn@7!kX2',display:'יוני',fbKey:'yoni'},
   'tsiko':{pass:'tsiko2026',display:"צ'יקו",fbKey:'tsiko'},
 };
@@ -583,7 +583,7 @@ function loadFromFirebase(){window.fbOnValue(window.fbRef(window.fbDb,'haksishim
     // אתחול ראשוני — כתוב משתמשים ל-Firebase
     const defaultUsers={
       'dekel':{pass:'dekel2026',display:'דקל',fbKey:'dekel'},
-      'mendi':{pass:'mendi2026',display:'מנדי',fbKey:'mendi'},
+      'mendi':{pass:'mendi2026',display:'מנדי הקקה',fbKey:'mendi'},
       'yoni':{pass:'Yn@7!kX2',display:'יוני',fbKey:'yoni'},
       'tsiko':{pass:'tsiko2026',display:"צ'יקו",fbKey:'tsiko'},
     };
@@ -990,8 +990,8 @@ function renderUserManagement(){
   if(!c||!usersLoaded)return;
   c.innerHTML=Object.entries(USERS).map(([k,u])=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <div style="min-width:60px;font-weight:700;font-size:.9rem">${u.display}</div>
       <div style="font-size:.75rem;color:var(--muted);min-width:55px">${k}</div>
+      <input id="disp-${k}" type="text" value="${u.display}" style="min-width:100px;background:#111;border:1.5px solid #444;color:var(--text);font-family:'Heebo',sans-serif;font-size:.88rem;padding:7px 10px;border-radius:8px;direction:rtl;text-align:right" placeholder="שם תצוגה">
       <input id="pass-${k}" type="text" value="${u.pass}" style="flex:1;min-width:140px;background:#111;border:1.5px solid #444;color:var(--text);font-family:monospace;font-size:.88rem;padding:7px 10px;border-radius:8px;direction:ltr;text-align:left" placeholder="סיסמה חדשה">
     </div>`).join('');
 }
@@ -1001,6 +1001,8 @@ function saveUsers(){
   Object.keys(USERS).forEach(k=>{
     const inp=document.getElementById('pass-'+k);
     if(inp&&inp.value.trim()) USERS[k].pass=inp.value.trim();
+    const dispInp=document.getElementById('disp-'+k);
+    if(dispInp&&dispInp.value.trim()) USERS[k].display=dispInp.value.trim();
   });
   appData.users=USERS;
   saveToFirebase();

@@ -297,7 +297,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   <div class="content" style="position:relative;z-index:1">
     <div class="section-title" style="text-align:right;margin-bottom:16px">📖 הסבר</div>
     <div class="explain-card"><h3>🎯 ניקוד משחקים</h3><ul><li><strong>תוצאה מדויקת</strong> – 3 נקודות</li><li><strong>ניצחון/תיקו נכון</strong> – 1 נקודה</li><li><strong>פספוס</strong> – 0</li></ul></div>
-    <div class="explain-card"><h3>🌟 ניקוד הימורים מיוחדים</h3><ul><li><strong>זוכה נכון</strong> – 10 נקודות</li><li><strong>סגנית נכונה</strong> – 10 נקודות</li><li><strong>מלך השערים נכון</strong> – 5 נקודות</li><li><strong>שלושתם יחד</strong> – בונוס! סה"כ <strong style="color:var(--gold)">35 נקודות</strong> (במקום 25)</li></ul></div>
+    <div class="explain-card"><h3>🌟 ניקוד הימורים מיוחדים</h3><ul><li><strong>זוכה נכון</strong> – 10 נקודות</li><li><strong>סגנית נכונה</strong> – 10 נקודות</li><li><strong>מלך השערים נכון</strong> – 15 נקודות</li><li><strong>שלושתם יחד</strong> – בונוס! סה"כ <strong style="color:var(--gold)">40 נקודות</strong> (במקום 35)</li></ul></div>
     <div class="explain-card"><h3>🔒 נעילה</h3><p>כל הימור נועל בשריקת הפתיחה לפי שעון ישראל.</p></div>
     <div class="explain-card"><h3>📺 שידורים</h3><p>כל המשחקים בכאן 11 ובספורט 1 של צ'רלטון.</p></div>
   </div>
@@ -1030,8 +1030,8 @@ function recalcAllScores(){
       let pts=0;
       if(gotWinner)pts+=10;
       if(gotRunnerup)pts+=10;
-      if(gotTopscorer)pts+=5;
-      if(gotWinner&&gotRunnerup&&gotTopscorer)pts+=10; // בונוס שלושתם
+      if(gotTopscorer)pts+=15;
+      if(gotWinner&&gotRunnerup&&gotTopscorer)pts+=5; // בונוס שלושתם
       appData.scores[ud.fbKey]+=pts;
     });
   }

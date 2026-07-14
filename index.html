@@ -203,7 +203,7 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
 <div class="page" id="page-upsets" style="position:relative">
   <div class="content" style="position:relative;z-index:1">
     <div class="section-title">🔮 סיכויי מהפך בטבלה</div>
-    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">הערכת סיכויים סטטיסטית (סימולציה) להמשך הטבלה, לפי סיכויי הניצחון האמיתיים במשחקים שנותרו</div>
+    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">לכל תוצאה אפשרית במשחקים שנותרו — הניקוד המדויק שכל מהמר יעלה אליו, לפי ההימור שהוא כבר הכניס</div>
     <div id="upsets-list"></div>
   </div>
 </div>
@@ -673,81 +673,80 @@ function renderMatches(){
 
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
 }
-const REMAINING_TEAMS_STRENGTH={'צרפת':0.638,'ספרד':0.548,'אנגליה':0.393,'ארגנטינה':0.405};
-const KNOCKOUT_DRAW_PROB=0.27;
-function matchWinProb(homeTeam,awayTeam,directHomeProb){
-  if(directHomeProb!=null)return directHomeProb;
-  const sh=REMAINING_TEAMS_STRENGTH[homeTeam],sa=REMAINING_TEAMS_STRENGTH[awayTeam];
-  if(sh==null||sa==null)return null;
-  return sh/(sh+sa);
+function getOpenMatches(){
+  return['sf1','sf2','3rd','fin'].map(id=>M.find(x=>x.id===id)).filter(m=>m&&!m.score&&m.home!=='TBD'&&m.away!=='TBD');
 }
-function simulateScoreline(pHomeDecisive){
-  if(Math.random()<KNOCKOUT_DRAW_PROB){
-    const d=Math.random();
-    return d<0.55?[0,0]:(d<0.90?[1,1]:[2,2]);
-  }
-  const decisiveHome=Math.random()<pHomeDecisive;
-  const m=Math.random();
-  const margin=m<0.35?[1,0]:(m<0.60?[2,1]:(m<0.80?[2,0]:(m<0.92?[3,1]:[3,0])));
-  return decisiveHome?margin:[margin[1],margin[0]];
+function getUsersWithScores(){
+  return Object.entries(USERS).map(([k,u])=>({key:k,fbKey:u.fbKey,display:u.display,base:(appData.scores&&appData.scores[u.fbKey])||0}));
 }
-function runUpsetSimulation(N){
-  const openMatches=[];
-  ['sf1','sf2','3rd','fin'].forEach(id=>{
-    const m=M.find(x=>x.id===id);
-    if(!m||m.score)return;
-    const pDirect=id==='sf1'?0.60:(id==='sf2'?0.57:null);
-    const p=matchWinProb(m.home,m.away,pDirect);
-    if(p==null)return;
-    openMatches.push({id:m.id,home:m.home,away:m.away,pHome:p});
+function betOutcome(matchId,winnerTeam,homeTeam,awayTeam,bet){
+  if(!bet||bet.home==null||bet.away==null)return null;
+  const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',winnerSide=winnerTeam===homeTeam?'H':'A';
+  return{correct:bw===winnerSide,guess:`${bet.home}-${bet.away}`};
+}
+function renderMatchScenario(m){
+  const users=getUsersWithScores();
+  let html=`<div class="explain-card" style="margin-bottom:14px"><h3>⚽ ${m.home} – ${m.away} <span style="color:var(--muted);font-weight:400;font-size:.7rem">(${fmtShort(m.kick)})</span></h3>`;
+  [m.home,m.away].forEach(winner=>{
+    const rows=users.map(u=>{
+      const bet=(appData.bets&&appData.bets[u.fbKey]&&appData.bets[u.fbKey][m.id]);
+      const o=betOutcome(m.id,winner,m.home,m.away,bet);
+      const newTotal=u.base+(o&&o.correct?1:0);
+      let note;
+      if(!bet||bet.home==null)note=`<span style="color:var(--muted)">לא הימר</span>`;
+      else if(o.correct)note=`<span style="color:var(--green)">✅ ${o.guess} → 1+ (או 3+ אם בול)</span>`;
+      else note=`<span style="color:var(--red)">❌ ${o.guess}</span>`;
+      return{display:u.display,newTotal,note};
+    }).sort((a,b)=>b.newTotal-a.newTotal);
+    html+=`<div style="margin-top:10px"><div style="font-weight:900;color:var(--gold);font-size:.83rem;margin-bottom:6px">אם ${winner} מנצחת:</div>`;
+    html+=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #2a2a2a;font-size:.82rem;gap:8px"><div style="min-width:70px;font-weight:700">${r.display}</div><div style="flex:1;text-align:center">${r.note}</div><div style="font-weight:900;color:var(--gold);white-space:nowrap">${r.newTotal} נק'</div></div>`).join('');
+    html+='</div>';
   });
-  const users=Object.entries(USERS).map(([k,u])=>({key:k,fbKey:u.fbKey,display:u.display,base:(appData.scores&&appData.scores[u.fbKey])||0}));
-  const rankCounts={};
-  users.forEach(u=>rankCounts[u.fbKey]=new Array(users.length).fill(0));
-  for(let i=0;i<N;i++){
-    const totals=users.map(u=>({fbKey:u.fbKey,total:u.base}));
-    openMatches.forEach(om=>{
-      const[hg,ag]=simulateScoreline(om.pHome);
-      totals.forEach(t=>{
-        const bet=(appData.bets&&appData.bets[t.fbKey]&&appData.bets[t.fbKey][om.id]);
-        if(!bet||bet.home==null||bet.away==null)return;
-        const bw=bet.home>bet.away?'H':bet.home<bet.away?'A':'D',rw=hg>ag?'H':hg<ag?'A':'D',exact=bet.home===hg&&bet.away===ag;
-        t.total+=exact?3:(bw===rw?1:0);
+  html+='</div>';
+  return html;
+}
+function cartesianWinners(matches){
+  let combos=[[]];
+  matches.forEach(m=>{
+    const next=[];
+    combos.forEach(c=>{next.push([...c,m.home]);next.push([...c,m.away]);});
+    combos=next;
+  });
+  return combos;
+}
+function renderCombinedProjection(openMatches){
+  const limited=openMatches.slice(0,4);
+  const combos=cartesianWinners(limited);
+  const users=getUsersWithScores();
+  let html='<div class="section-title" style="font-size:1rem;margin:22px 0 10px">📊 תחזית טבלה — לפי כל השילובים האפשריים</div>';
+  combos.forEach(winners=>{
+    const label=limited.map((m,i)=>`${SL[m.stage]||m.stage}: ${winners[i]}`).join(' · ');
+    const rows=users.map(u=>{
+      let total=u.base;
+      limited.forEach((m,i)=>{
+        const bet=(appData.bets&&appData.bets[u.fbKey]&&appData.bets[u.fbKey][m.id]);
+        const o=betOutcome(m.id,winners[i],m.home,m.away,bet);
+        if(o&&o.correct)total+=1;
       });
-    });
-    totals.sort((a,b)=>b.total-a.total);
-    totals.forEach((t,idx)=>rankCounts[t.fbKey][idx]++);
-  }
-  return{users,rankCounts,N,openMatches};
+      return{display:u.display,total};
+    }).sort((a,b)=>b.total-a.total);
+    html+=`<div class="explain-card" style="margin-bottom:10px"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;font-size:.83rem">${label}</div>`;
+    html+=rows.map((r,i)=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.82rem"><div>${i+1}. ${r.display}</div><div style="font-weight:900;color:var(--gold)">${r.total}+ נק'</div></div>`).join('');
+    html+='</div>';
+  });
+  return html;
 }
 function renderUpsetChances(){
   const list=document.getElementById('upsets-list');
   if(!list)return;
-  const{users,rankCounts,N,openMatches}=runUpsetSimulation(8000);
-  const currentSorted=[...users].sort((a,b)=>b.base-a.base);
+  const openMatches=getOpenMatches();
   if(openMatches.length===0){
-    list.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">אין כרגע משחקים פתוחים עם אי-ודאות לניתוח — כל התוצאות הרלוונטיות כבר ידועות</div>';
+    list.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">אין כרגע משחקים פתוחים לניתוח — כל התוצאות הרלוונטיות כבר ידועות</div>';
     return;
   }
-  let html=`<div class="explain-card" style="margin-bottom:14px"><div style="font-size:.78rem;color:var(--muted)">מבוסס על ${N.toLocaleString()} סימולציות לפי סיכויי ניצחון אמיתיים (יחסי הימורים) במשחקים שנותרו: ${openMatches.map(om=>`${om.home} נגד ${om.away}`).join(' · ')}. הערכה גסה בלבד — לא כולל את הימור מלך השערים.</div></div>`;
-  currentSorted.forEach((u,idx)=>{
-    const counts=rankCounts[u.fbKey];
-    let pUp=0,pDown=0;
-    counts.forEach((c,rank)=>{if(rank<idx)pUp+=c;else if(rank>idx)pDown+=c;});
-    pUp=Math.round(pUp/N*100);pDown=Math.round(pDown/N*100);
-    const pSame=100-pUp-pDown;
-    const barsHtml=counts.map((c,rank)=>{
-      const pct=Math.round(c/N*100);
-      return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem"><div style="width:44px;color:var(--muted)">מקום ${rank+1}</div><div style="flex:1;background:#111;border-radius:4px;height:10px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${rank===idx?'var(--gold)':'#555'}"></div></div><div style="width:32px;text-align:left">${pct}%</div></div>`;
-    }).join('');
-    html+=`<div class="explain-card" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <div style="font-weight:900;font-size:.95rem">${u.display} <span style="color:var(--muted);font-weight:400;font-size:.75rem">· כרגע מקום ${idx+1}, ${u.base} נק'</span></div>
-        <div style="font-size:.78rem;font-weight:700">${pUp>0?`<span style="color:var(--green)">⬆ ${pUp}%</span> `:''}<span style="color:var(--muted)">⏺ ${pSame}%</span>${pDown>0?` <span style="color:var(--red)">⬇ ${pDown}%</span>`:''}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">${barsHtml}</div>
-    </div>`;
-  });
+  let html='<div class="explain-card" style="margin-bottom:14px"><div style="font-size:.78rem;color:var(--muted)">לכל משחק פתוח: לאיזה ניקוד כל מהמר עולה בכל תרחיש, לפי ההימור שהוא כבר הכניס. הניקוד המוצג הוא המינימום המובטח (כיוון נכון = 1+); אם ההימור גם מדויק (התוצאה בול) זה 3+ במקום 1+.</div></div>';
+  openMatches.forEach(m=>{html+=renderMatchScenario(m);});
+  html+=renderCombinedProjection(openMatches);
   list.innerHTML=html;
 }
 function knockoutResolveMap(){

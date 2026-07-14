@@ -162,7 +162,6 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
     <nav>
       <button class="active" onclick="showPage('leaderboard',this)">🏆 טבלה</button>
       <button onclick="showPage('matches',this)">📅 משחקים</button>
-      <button onclick="showPage('upsets',this)">🔮 סיכויי מהפך</button>
       <button onclick="showPage('bets',this)">🎯 הימורים</button>
       <button onclick="showPage('special',this)">🌟 מיוחדים</button>
       <button onclick="showPage('explain',this)">📖 הסבר</button>
@@ -199,14 +198,6 @@ nav button.active{background:var(--gold);border-color:var(--gold);color:#000;}
   </div>
 </div>
 
-<!-- GROUPS -->
-<div class="page" id="page-upsets" style="position:relative">
-  <div class="content" style="position:relative;z-index:1">
-    <div class="section-title">🔮 סיכויי מהפך בטבלה</div>
-    <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:14px">לכל תוצאה אפשרית במשחקים שנותרו — הניקוד המדויק שכל מהמר יעלה אליו, לפי ההימור שהוא כבר הכניס</div>
-    <div id="upsets-list"></div>
-  </div>
-</div>
 
 <!-- BETS -->
 <div class="page" id="page-bets" style="position:relative">
@@ -587,7 +578,7 @@ async function saveToFirebase(){isSaving=true;try{await window.fbSet(window.fbRe
 function showSync(){const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='upsets')renderUpsetChances();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');if(btn)btn.classList.add('active');if(name==='bets')renderBetsList();if(name==='leaderboard')renderLeaderboard();if(name==='matches')renderMatches();if(name==='special')renderSpecialBets();if(name==='admin'){populateAdminSelect();renderAdminResults();renderUserManagement();loadSpecialResultsToAdmin();loadBubbleAdmin();}}
 
 function isLocked(kick){return new Date()>=new Date(kick);}
 function fmtDate(kick){return new Date(kick).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🇮🇱';}
@@ -672,91 +663,6 @@ function renderMatches(){
   upcoming.slice(1).forEach(m=>{html+=buildMatchCard(m,false);});
 
   list.innerHTML=html||'<div style="color:var(--muted);text-align:center;padding:20px">אין משחקים</div>';
-}
-function getOpenMatches(){
-  return['sf1','sf2','3rd','fin'].map(id=>M.find(x=>x.id===id)).filter(m=>m&&!m.score&&m.home!=='TBD'&&m.away!=='TBD');
-}
-function getUsersWithScores(){
-  return Object.entries(USERS).map(([k,u])=>({key:k,fbKey:u.fbKey,display:u.display,base:(appData.scores&&appData.scores[u.fbKey])||0}));
-}
-function betSide(bet){
-  if(!bet||bet.home==null||bet.away==null)return null;
-  return bet.home>bet.away?'H':bet.home<bet.away?'A':'D';
-}
-function matchOutcomeOptions(m){
-  return[
-    {side:'H',label:`אם ${m.home} מנצחת`},
-    {side:'A',label:`אם ${m.away} מנצחת`},
-    {side:'D',label:'אם מסתיים בתיקו (הוכרע בפנדלים)'}
-  ];
-}
-function renderMatchScenario(m){
-  const users=getUsersWithScores();
-  let html=`<div class="explain-card" style="margin-bottom:14px"><h3>⚽ ${m.home} – ${m.away} <span style="color:var(--muted);font-weight:400;font-size:.7rem">(${fmtShort(m.kick)})</span></h3>`;
-  matchOutcomeOptions(m).forEach(opt=>{
-    const rows=users.map(u=>{
-      const bet=(appData.bets&&appData.bets[u.fbKey]&&appData.bets[u.fbKey][m.id]);
-      const bw=betSide(bet);
-      const correct=bw!=null&&bw===opt.side;
-      let note;
-      if(bw==null)note=`<span style="color:var(--muted)">לא הימר</span>`;
-      else if(correct)note=`<span style="color:var(--green)">✅ ${bet.home}-${bet.away} → 1+ (או 3+ אם ${bet.home}-${bet.away} זו התוצאה המדויקת)</span>`;
-      else note=`<span style="color:var(--red)">❌ ${bet.home}-${bet.away}</span>`;
-      return{display:u.display,newTotal:u.base+(correct?1:0),note};
-    }).sort((a,b)=>b.newTotal-a.newTotal);
-    html+=`<div style="margin-top:10px"><div style="font-weight:900;color:var(--gold);font-size:.83rem;margin-bottom:6px">${opt.label}:</div>`;
-    html+=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #2a2a2a;font-size:.82rem;gap:8px"><div style="min-width:70px;font-weight:700">${r.display}</div><div style="flex:1;text-align:center">${r.note}</div><div style="font-weight:900;color:var(--gold);white-space:nowrap">${r.newTotal} נק'</div></div>`).join('');
-    html+='</div>';
-  });
-  html+='</div>';
-  return html;
-}
-function cartesianOutcomes(matches){
-  let combos=[[]];
-  matches.forEach(m=>{
-    const opts=matchOutcomeOptions(m).map(o=>({m,side:o.side,label:o.side==='H'?m.home:o.side==='A'?m.away:'תיקו/פנדלים'}));
-    const next=[];
-    combos.forEach(c=>{opts.forEach(o=>next.push([...c,o]));});
-    combos=next;
-  });
-  return combos;
-}
-function renderCombinedProjection(openMatches){
-  const limited=openMatches.slice(0,3);
-  const combos=cartesianOutcomes(limited);
-  const users=getUsersWithScores();
-  let html='<div class="section-title" style="font-size:1rem;margin:22px 0 10px">📊 תחזית טבלה — לפי כל השילובים האפשריים</div>';
-  if(openMatches.length>limited.length){
-    html+=`<div style="font-size:.72rem;color:var(--muted);margin-bottom:8px">מוצגים שילובים עבור ${limited.map(m=>`${m.home}–${m.away}`).join(', ')} בלבד (יותר מדי משחקים פתוחים בו-זמנית להצגת כל הצירופים)</div>`;
-  }
-  combos.forEach(combo=>{
-    const label=combo.map(c=>`${SL[c.m.stage]||c.m.stage}: ${c.label}`).join(' · ');
-    const rows=users.map(u=>{
-      let total=u.base;
-      combo.forEach(c=>{
-        const bet=(appData.bets&&appData.bets[u.fbKey]&&appData.bets[u.fbKey][c.m.id]);
-        if(betSide(bet)===c.side)total+=1;
-      });
-      return{display:u.display,total};
-    }).sort((a,b)=>b.total-a.total);
-    html+=`<div class="explain-card" style="margin-bottom:10px"><div style="font-weight:900;color:var(--gold);margin-bottom:6px;font-size:.83rem">${label}</div>`;
-    html+=rows.map((r,i)=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.82rem"><div>${i+1}. ${r.display}</div><div style="font-weight:900;color:var(--gold)">${r.total}+ נק'</div></div>`).join('');
-    html+='</div>';
-  });
-  return html;
-}
-function renderUpsetChances(){
-  const list=document.getElementById('upsets-list');
-  if(!list)return;
-  const openMatches=getOpenMatches();
-  if(openMatches.length===0){
-    list.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">אין כרגע משחקים פתוחים לניתוח — כל התוצאות הרלוונטיות כבר ידועות</div>';
-    return;
-  }
-  let html='<div class="explain-card" style="margin-bottom:14px"><div style="font-size:.78rem;color:var(--muted)">לכל משחק פתוח: לאיזה ניקוד כל מהמר עולה בכל תרחיש, לפי ההימור שהוא כבר הכניס. הניקוד המוצג הוא המינימום המובטח (כיוון נכון = 1+); אם ההימור גם מדויק (התוצאה בול) זה 3+ במקום 1+.</div></div>';
-  openMatches.forEach(m=>{html+=renderMatchScenario(m);});
-  html+=renderCombinedProjection(openMatches);
-  list.innerHTML=html;
 }
 function knockoutResolveMap(){
   const gm=M.filter(m=>m.stage==='group');

@@ -504,8 +504,8 @@ const M=[
 {id:'qf4',stage:'qf',home:'ארגנטינה',away:'שווייץ',kick:'2026-07-12T04:00:00',venue:'קנזס סיטי',score:null},
 {id:'sf1',stage:'sf',home:'צרפת',away:'ספרד',kick:'2026-07-14T22:00:00',venue:'דאלאס',score:null},
 {id:'sf2',stage:'sf',home:'אנגליה',away:'ארגנטינה',kick:'2026-07-15T22:00:00',venue:'אטלנטה',score:null},
-{id:'3rd',stage:'third',home:'TBD',away:'TBD',kick:'2026-07-19T00:00:00',venue:'מיאמי',score:null},
-{id:'fin',stage:'final',home:'TBD',away:'TBD',kick:'2026-07-19T22:00:00',venue:"ניו יורק (MetLife)",score:null},
+{id:'3rd',stage:'third',home:'צרפת',away:'אנגליה',kick:'2026-07-19T00:00:00',venue:'מיאמי',score:null},
+{id:'fin',stage:'final',home:'ספרד',away:'ארגנטינה',kick:'2026-07-19T22:00:00',venue:"ניו יורק (MetLife)",score:null},
 ];
 
 function doLogin(){try{const u=document.getElementById('login-user').value.trim().toLowerCase(),p=document.getElementById('login-pass').value.trim(),rem=document.getElementById('remember-me').checked,e=document.getElementById('login-error');e.textContent='';if(!u){e.textContent='❌ הכנס שם משתמש';return;}if(!USERS[u]){e.textContent='❌ שם משתמש לא קיים';return;}if(USERS[u].pass!==p){e.textContent='❌ סיסמה שגויה';return;}currentUser={username:u,...USERS[u]};try{sessionStorage.setItem('hk_user',u);}catch(x){}try{if(rem){localStorage.setItem('hk_saved_user',u);// לא שומרים סיסמה — מאמתים תמיד מול Firebase

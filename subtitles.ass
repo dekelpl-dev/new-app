@@ -1,0 +1,31 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Main,RubikXB,80,&H00FFFFFF,&H00FFFFFF,&H50000000,&H00000000,0,0,0,0,100,100,0,0,3,14,0,2,80,80,520,177
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.20,0:00:02.40,Main,,0,0,0,,{\fad(70,70)}אני רוצה להגיד לכם
+Dialogue: 0,0:00:02.40,0:00:03.60,Main,,0,0,0,,{\fad(70,70)}דבר כזה
+Dialogue: 0,0:00:03.60,0:00:05.50,Main,,0,0,0,,{\fad(70,70)}אין מצב
+Dialogue: 0,0:00:05.50,0:00:07.20,Main,,0,0,0,,{\fad(70,70)}בשום צורה
+Dialogue: 0,0:00:07.20,0:00:09.00,Main,,0,0,0,,{\fad(70,70)}שמה שקורה פה
+Dialogue: 0,0:00:09.00,0:00:10.00,Main,,0,0,0,,{\fad(70,70)}יקרה כמו שצריך
+Dialogue: 0,0:00:10.00,0:00:11.60,Main,,0,0,0,,{\fad(70,70)}כי בגדול אם רוצים
+Dialogue: 0,0:00:11.60,0:00:13.00,Main,,0,0,0,,{\fad(70,70)}לקחת ולדייק
+Dialogue: 0,0:00:13.00,0:00:14.90,Main,,0,0,0,,{\fad(70,70)}גם בהתפתחות אישית
+Dialogue: 0,0:00:14.90,0:00:16.10,Main,,0,0,0,,{\fad(70,70)}גם לא בהתפתחות אישית
+Dialogue: 0,0:00:16.10,0:00:17.90,Main,,0,0,0,,{\fad(70,70)}גם כשאני בהתפתחות אישית
+Dialogue: 0,0:00:17.90,0:00:19.20,Main,,0,0,0,,{\fad(70,70)}גם לא בהתפתחות אישית
+Dialogue: 0,0:00:19.20,0:00:21.60,Main,,0,0,0,,{\fad(70,70)}תמיד הדברים\Nנשמעים אותו דבר
+Dialogue: 0,0:00:21.60,0:00:23.40,Main,,0,0,0,,{\fad(70,70)}תמיד זה נראה כאילו
+Dialogue: 0,0:00:23.40,0:00:25.30,Main,,0,0,0,,{\fad(70,70)}זה הרגע
+Dialogue: 0,0:00:25.30,0:00:26.70,Main,,0,0,0,,{\fad(70,70)}זה נראה כאילו זה
+Dialogue: 0,0:00:26.70,0:00:28.10,Main,,0,0,0,,{\fad(70,70)}כל כך הרגע והשנייה
+Dialogue: 0,0:00:28.10,0:00:28.80,Main,,0,0,0,,{\fad(70,70)}וזה קורה
+Dialogue: 0,0:00:28.80,0:00:30.60,Main,,0,0,0,,{\fad(70,70)}אבל בתכלס
